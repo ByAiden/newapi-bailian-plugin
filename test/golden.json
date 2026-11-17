@@ -1,0 +1,2681 @@
+{
+  "unixNow": 1794880000,
+  "cases": [
+    {
+      "name": "wan2.7 image request",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "wan2.7-image",
+            "input": {
+              "messages": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "text": "a cat"
+                    }
+                  ]
+                }
+              ]
+            },
+            "parameters": {
+              "n": 1,
+              "size": "1024x1024"
+            }
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "wan2.7-image",
+          "upstreamModel": "wan2.7-image",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "url": "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer test-key"
+        },
+        "body": {
+          "model": "wan2.7-image",
+          "input": {
+            "messages": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "text": "a cat"
+                  }
+                ]
+              }
+            ]
+          },
+          "parameters": {
+            "n": 1,
+            "size": "1024*1024"
+          }
+        },
+        "action": "text_to_image"
+      }
+    },
+    {
+      "name": "qwen-image-3.0 reservation",
+      "hook": "extractUsage",
+      "args": [
+        {
+          "requestBody": {
+            "model": "qwen-image-3.0-pro",
+            "input": {
+              "messages": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "image": "https://x/a.png"
+                    },
+                    {
+                      "text": "blue"
+                    }
+                  ]
+                }
+              ]
+            },
+            "parameters": {
+              "size": "1024*1024"
+            }
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "qwen-image-3.0-pro",
+          "upstreamModel": "qwen-image-3.0-pro",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "image_count": 1,
+        "output_image_type": "qima_output_1k",
+        "input_image_count": 1
+      }
+    },
+    {
+      "name": "qwen-image-3.0 mapped alias request",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "my-image",
+            "input": {
+              "messages": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "image": "https://x/a.png"
+                    },
+                    {
+                      "text": "blue"
+                    }
+                  ]
+                }
+              ]
+            },
+            "parameters": {
+              "size": "1024*1024"
+            }
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "my-image",
+          "upstreamModel": "qwen-image-3.0-pro",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "url": "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer test-key"
+        },
+        "body": {
+          "model": "qwen-image-3.0-pro",
+          "input": {
+            "messages": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "image": "https://x/a.png"
+                  },
+                  {
+                    "text": "blue"
+                  }
+                ]
+              }
+            ]
+          },
+          "parameters": {
+            "size": "1024*1024",
+            "n": 1
+          }
+        },
+        "action": "image_to_image"
+      }
+    },
+    {
+      "name": "image reply completes immediately",
+      "hook": "parseSubmitResponse",
+      "args": [
+        {
+          "requestBody": {
+            "model": "wan2.7-image",
+            "input": {
+              "messages": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "text": "a cat"
+                    }
+                  ]
+                }
+              ]
+            },
+            "parameters": {
+              "n": 1,
+              "size": "1024x1024"
+            }
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "wan2.7-image",
+          "upstreamModel": "wan2.7-image",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        },
+        {
+          "statusCode": 200,
+          "headers": {},
+          "body": {
+            "request_id": "r1",
+            "output": {
+              "choices": [
+                {
+                  "message": {
+                    "content": [
+                      {
+                        "image": "https://oss.example/a.png"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "usage": {
+              "image_count": 1
+            }
+          }
+        }
+      ],
+      "expected": {
+        "taskId": "task_public",
+        "taskData": {
+          "request_id": "r1",
+          "output": {
+            "choices": [
+              {
+                "message": {
+                  "content": [
+                    {
+                      "image": "https://oss.example/a.png"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "usage": {
+            "image_count": 1
+          }
+        },
+        "immediate": {
+          "status": "SUCCESS",
+          "progress": "100%",
+          "url": "https://oss.example/a.png"
+        }
+      }
+    },
+    {
+      "name": "image settles on usage",
+      "hook": "extractUsageOnComplete",
+      "args": [
+        {
+          "model": "wan2.7-image",
+          "upstreamModel": "wan2.7-image"
+        },
+        {
+          "status": "SUCCESS"
+        },
+        {
+          "request_id": "r1",
+          "output": {
+            "choices": [
+              {
+                "message": {
+                  "content": [
+                    {
+                      "image": "https://oss.example/a.png"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "usage": {
+            "image_count": 1
+          }
+        }
+      ],
+      "expected": {
+        "image_count": 1
+      }
+    },
+    {
+      "name": "image n over the model limit",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "wan2.7-image",
+            "input": {
+              "messages": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "text": "a cat"
+                    }
+                  ]
+                }
+              ]
+            },
+            "parameters": {
+              "n": 5
+            }
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "wan2.7-image",
+          "upstreamModel": "wan2.7-image",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expectedError": "n must be an integer between 1 and 4"
+    },
+    {
+      "name": "wan3.0 video request",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "wan3.0-video",
+            "input": {
+              "prompt": "a fox"
+            },
+            "parameters": {
+              "duration": 2,
+              "resolution": "480P",
+              "ratio": "16:9"
+            }
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "wan3.0-video",
+          "upstreamModel": "wan3.0-video",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "url": "https://dashscope.aliyuncs.com/api/v1/services/aigc/video-generation/video-synthesis",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer test-key",
+          "X-DashScope-Async": "enable"
+        },
+        "body": {
+          "model": "wan3.0-video",
+          "input": {
+            "prompt": "a fox"
+          },
+          "parameters": {
+            "duration": 2,
+            "resolution": "480P",
+            "ratio": "16:9"
+          }
+        },
+        "action": "text_to_video"
+      }
+    },
+    {
+      "name": "wan3.0 video reservation",
+      "hook": "extractUsage",
+      "args": [
+        {
+          "requestBody": {
+            "model": "wan3.0-video",
+            "input": {
+              "prompt": "a fox"
+            },
+            "parameters": {
+              "duration": 2,
+              "resolution": "480P",
+              "ratio": "16:9"
+            }
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "wan3.0-video",
+          "upstreamModel": "wan3.0-video",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "seconds": 2,
+        "resolution": "480P"
+      }
+    },
+    {
+      "name": "wan3.0 smart duration reserves 30s",
+      "hook": "extractUsage",
+      "args": [
+        {
+          "requestBody": {
+            "model": "wan3.0-video",
+            "input": {
+              "prompt": "a fox"
+            },
+            "parameters": {
+              "duration": -1
+            }
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "wan3.0-video",
+          "upstreamModel": "wan3.0-video",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "seconds": 30,
+        "resolution": "1080P"
+      }
+    },
+    {
+      "name": "happyhorse i2v request",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "happyhorse-1.1-i2v",
+            "input": {
+              "prompt": "run"
+            },
+            "parameters": {
+              "resolution": "720P"
+            },
+            "images": [
+              "https://x/a.png"
+            ]
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "happyhorse-1.1-i2v",
+          "upstreamModel": "happyhorse-1.1-i2v",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "url": "https://dashscope.aliyuncs.com/api/v1/services/aigc/video-generation/video-synthesis",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer test-key",
+          "X-DashScope-Async": "enable"
+        },
+        "body": {
+          "model": "happyhorse-1.1-i2v",
+          "input": {
+            "prompt": "run",
+            "media": [
+              {
+                "type": "first_frame",
+                "url": "https://x/a.png"
+              }
+            ]
+          },
+          "parameters": {
+            "resolution": "720P",
+            "duration": 5
+          }
+        },
+        "action": "image_to_video"
+      }
+    },
+    {
+      "name": "happyhorse t2v duration limit",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "happyhorse-1.1-t2v",
+            "input": {
+              "prompt": "x"
+            },
+            "parameters": {
+              "duration": 20
+            }
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "happyhorse-1.1-t2v",
+          "upstreamModel": "happyhorse-1.1-t2v",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expectedError": "happyhorse-1.1-t2v duration must be an integer between 3 and"
+    },
+    {
+      "name": "video submit reply",
+      "hook": "parseSubmitResponse",
+      "args": [
+        {
+          "requestBody": {
+            "model": "wan3.0-video",
+            "input": {
+              "prompt": "a fox"
+            },
+            "parameters": {
+              "duration": 2,
+              "resolution": "480P",
+              "ratio": "16:9"
+            }
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "wan3.0-video",
+          "upstreamModel": "wan3.0-video",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        },
+        {
+          "statusCode": 200,
+          "headers": {},
+          "body": {
+            "request_id": "r",
+            "output": {
+              "task_id": "dash-1",
+              "task_status": "PENDING"
+            }
+          }
+        }
+      ],
+      "expected": {
+        "taskId": "dash-1",
+        "taskData": {
+          "request_id": "r",
+          "output": {
+            "task_id": "dash-1",
+            "task_status": "PENDING"
+          }
+        }
+      }
+    },
+    {
+      "name": "task query",
+      "hook": "buildQueryRequest",
+      "args": [
+        {
+          "taskId": "dash-1",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "model": "wan3.0-video",
+          "upstreamModel": "wan3.0-video"
+        }
+      ],
+      "expected": {
+        "url": "https://dashscope.aliyuncs.com/api/v1/tasks/dash-1",
+        "method": "GET",
+        "headers": {
+          "Authorization": "Bearer test-key"
+        }
+      }
+    },
+    {
+      "name": "task running",
+      "hook": "parseTaskResult",
+      "args": [
+        {
+          "taskId": "dash-1",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "model": "wan3.0-video",
+          "upstreamModel": "wan3.0-video"
+        },
+        {
+          "output": {
+            "task_status": "RUNNING"
+          }
+        },
+        {
+          "status": 200,
+          "headers": {}
+        }
+      ],
+      "expected": {
+        "status": "IN_PROGRESS"
+      }
+    },
+    {
+      "name": "task succeeded",
+      "hook": "parseTaskResult",
+      "args": [
+        {
+          "taskId": "dash-1",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "model": "wan3.0-video",
+          "upstreamModel": "wan3.0-video"
+        },
+        {
+          "output": {
+            "task_status": "SUCCEEDED",
+            "video_url": "https://oss.example/v.mp4"
+          },
+          "usage": {
+            "input_video_duration": 0,
+            "output_video_duration": 2,
+            "SR": 480
+          }
+        },
+        {
+          "status": 200,
+          "headers": {}
+        }
+      ],
+      "expected": {
+        "status": "SUCCESS",
+        "progress": "100%",
+        "url": "https://oss.example/v.mp4"
+      }
+    },
+    {
+      "name": "task failed",
+      "hook": "parseTaskResult",
+      "args": [
+        {
+          "taskId": "dash-1",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "model": "wan3.0-video",
+          "upstreamModel": "wan3.0-video"
+        },
+        {
+          "output": {
+            "task_status": "FAILED",
+            "code": "InternalError",
+            "message": "boom"
+          }
+        },
+        {
+          "status": 200,
+          "headers": {}
+        }
+      ],
+      "expected": {
+        "status": "FAILURE",
+        "reason": "InternalError: boom"
+      }
+    },
+    {
+      "name": "wan3.0 settles input plus output seconds",
+      "hook": "extractUsageOnComplete",
+      "args": [
+        {
+          "taskId": "dash-1",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "model": "wan3.0-video",
+          "upstreamModel": "wan3.0-video"
+        },
+        {
+          "status": "SUCCESS"
+        },
+        {
+          "output": {
+            "task_status": "SUCCEEDED",
+            "video_url": "https://oss.example/v.mp4"
+          },
+          "usage": {
+            "input_video_duration": 0,
+            "output_video_duration": 2,
+            "SR": 480
+          }
+        }
+      ],
+      "expected": {
+        "seconds": 2,
+        "resolution": "480P"
+      }
+    },
+    {
+      "name": "video artifact",
+      "hook": "listArtifacts",
+      "args": [
+        {
+          "status": "SUCCESS",
+          "data": {
+            "output": {
+              "task_status": "SUCCEEDED",
+              "video_url": "https://oss.example/v.mp4"
+            },
+            "usage": {
+              "input_video_duration": 0,
+              "output_video_duration": 2,
+              "SR": 480
+            }
+          }
+        }
+      ],
+      "expected": [
+        {
+          "key": "video",
+          "type": "video",
+          "mimeType": "video/mp4"
+        }
+      ]
+    },
+    {
+      "name": "artifact falls back to the stored link",
+      "hook": "buildContentRequest",
+      "args": [
+        {
+          "artifactKey": "video",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "k",
+          "data": {
+            "output": {
+              "task_status": "SUCCEEDED",
+              "video_url": "https://oss.example/v.mp4"
+            },
+            "usage": {
+              "input_video_duration": 0,
+              "output_video_duration": 2,
+              "SR": 480
+            }
+          },
+          "clientRequest": {
+            "method": "GET"
+          }
+        }
+      ],
+      "expected": {
+        "url": "https://oss.example/v.mp4",
+        "method": "GET",
+        "credentialless": true
+      }
+    },
+    {
+      "name": "speech request",
+      "hook": "convertRequest",
+      "args": [
+        {
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "path": "/v1/audio/speech",
+          "config": {
+            "defaultVoice": "longanhuan_v3.6"
+          }
+        },
+        {
+          "model": "qwen-audio-3.0-tts-plus",
+          "stream": false,
+          "body": {
+            "model": "qwen-audio-3.0-tts-plus",
+            "input": "你好",
+            "voice": "alloy"
+          }
+        }
+      ],
+      "expected": {
+        "method": "POST",
+        "body": {
+          "model": "qwen-audio-3.0-tts-plus",
+          "input": {
+            "text": "你好",
+            "voice": "longanhuan_v3.6",
+            "format": "mp3",
+            "sample_rate": 24000
+          }
+        },
+        "headers": {
+          "X-DashScope-SSE": "enable"
+        },
+        "stream": true,
+        "state": {
+          "kind": "speech",
+          "model": "qwen-audio-3.0-tts-plus",
+          "format": "mp3",
+          "clientStream": false,
+          "chunks": 0,
+          "characters": 0
+        }
+      }
+    },
+    {
+      "name": "speech audio chunk",
+      "hook": "convertStreamEvent",
+      "args": [
+        {
+          "state": {
+            "kind": "speech",
+            "format": "mp3",
+            "clientStream": false,
+            "chunks": 0,
+            "characters": 0
+          },
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "path": "/v1/audio/speech",
+          "config": {
+            "defaultVoice": "longanhuan_v3.6"
+          }
+        },
+        {
+          "data": "{\"output\":{\"audio\":{\"data\":\"SUQz\"}},\"usage\":{\"characters\":4}}"
+        }
+      ],
+      "expected": {
+        "state": {
+          "chunks": 1,
+          "characters": 4,
+          "kind": "speech",
+          "format": "mp3",
+          "clientStream": false
+        },
+        "chunks": [
+          {
+            "bodyBase64": "SUQz"
+          }
+        ],
+        "contentType": "audio/mpeg"
+      }
+    },
+    {
+      "name": "speech without audio fails",
+      "hook": "convertStreamEvent",
+      "args": [
+        {
+          "state": {
+            "kind": "speech",
+            "format": "mp3",
+            "clientStream": false,
+            "chunks": 0,
+            "characters": 0
+          },
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "path": "/v1/audio/speech",
+          "config": {
+            "defaultVoice": "longanhuan_v3.6"
+          }
+        },
+        {
+          "done": true
+        }
+      ],
+      "expected": {
+        "error": {
+          "status": 502,
+          "message": "Bailian returned no audio",
+          "type": "upstream_error"
+        }
+      }
+    },
+    {
+      "name": "speech JSON reply is refused",
+      "hook": "convertResponse",
+      "args": [
+        {
+          "state": {
+            "kind": "speech",
+            "format": "mp3",
+            "clientStream": false,
+            "chunks": 0,
+            "characters": 0
+          },
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "path": "/v1/audio/speech",
+          "config": {
+            "defaultVoice": "longanhuan_v3.6"
+          }
+        },
+        {
+          "status": 200,
+          "headers": {},
+          "body": "{\"output\":{\"audio\":{\"url\":\"https://oss/x\"}}}"
+        }
+      ],
+      "expected": {
+        "error": {
+          "status": 502,
+          "message": "Bailian answered speech without an audio stream",
+          "type": "upstream_error"
+        }
+      }
+    },
+    {
+      "name": "transcription request",
+      "hook": "convertRequest",
+      "args": [
+        {
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "path": "/v1/audio/transcriptions",
+          "config": {}
+        },
+        {
+          "model": "qwen-audio-3.0-asr-flash",
+          "stream": false,
+          "form": {
+            "fields": {
+              "model": [
+                "qwen-audio-3.0-asr-flash"
+              ],
+              "language": [
+                "zh"
+              ]
+            },
+            "files": [
+              {
+                "field": "file",
+                "filename": "a.mp3",
+                "contentType": "audio/mpeg",
+                "size": 9
+              }
+            ]
+          }
+        }
+      ],
+      "expected": {
+        "method": "POST",
+        "body": {
+          "model": "qwen-audio-3.0-asr-flash",
+          "input": {
+            "messages": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_audio",
+                    "input_audio": {
+                      "data": {
+                        "$file": "file",
+                        "encoding": "dataUrl"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "parameters": {
+            "format": "mp3",
+            "language_hints": [
+              "zh"
+            ]
+          }
+        },
+        "stream": false,
+        "state": {
+          "kind": "transcription",
+          "model": "qwen-audio-3.0-asr-flash",
+          "responseFormat": "json"
+        }
+      }
+    },
+    {
+      "name": "transcription reply",
+      "hook": "convertResponse",
+      "args": [
+        {
+          "state": {
+            "kind": "transcription",
+            "responseFormat": "json"
+          },
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "path": "/v1/audio/transcriptions",
+          "config": {}
+        },
+        {
+          "status": 200,
+          "headers": {},
+          "body": "{\"output\":{\"choices\":[{\"message\":{\"content\":[{\"text\":\"你好\"}]}}]},\"usage\":{\"duration\":1.4}}"
+        }
+      ],
+      "expected": {
+        "body": {
+          "text": "你好",
+          "usage": {
+            "type": "tokens",
+            "input_tokens": 2,
+            "output_tokens": 0,
+            "total_tokens": 2,
+            "prompt_tokens": 2,
+            "completion_tokens": 0,
+            "seconds": 2
+          }
+        }
+      }
+    },
+    {
+      "name": "sk-sp key on the Beijing host",
+      "hook": "checkKey",
+      "args": [
+        {
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "config": {}
+        },
+        "sk-sp-x"
+      ],
+      "expected": {
+        "error": {
+          "en": "This is not a Bailian API key, so it does not work on dashscope.aliyuncs.com. Use a Bailian API key (sk-...).",
+          "zh": "这不是百炼 API Key，不能用于 dashscope.aliyuncs.com，请填写百炼 API Key（sk-）。"
+        }
+      }
+    },
+    {
+      "name": "z-image request sends prompt_extend and no n",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "z-image-turbo",
+            "input": {
+              "messages": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "text": "a cat"
+                    }
+                  ]
+                }
+              ]
+            },
+            "parameters": {
+              "size": "1024x1536"
+            }
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "z-image-turbo",
+          "upstreamModel": "z-image-turbo",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "url": "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer test-key"
+        },
+        "body": {
+          "model": "z-image-turbo",
+          "input": {
+            "messages": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "text": "a cat"
+                  }
+                ]
+              }
+            ]
+          },
+          "parameters": {
+            "size": "1024*1536",
+            "prompt_extend": false
+          }
+        },
+        "action": "text_to_image"
+      }
+    },
+    {
+      "name": "z-image reservation prices prompt rewriting",
+      "hook": "extractUsage",
+      "args": [
+        {
+          "requestBody": {
+            "model": "z-image-turbo",
+            "input": {
+              "messages": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "text": "a cat"
+                    }
+                  ]
+                }
+              ]
+            },
+            "parameters": {
+              "prompt_extend": true
+            }
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "z-image-turbo",
+          "upstreamModel": "z-image-turbo",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "image_count": 1,
+        "prompt_extend": true
+      }
+    },
+    {
+      "name": "qwen-image-2.1-pro request with three images",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "qwen-image-2.1-pro",
+            "input": {
+              "messages": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "image": "https://x/1.png"
+                    },
+                    {
+                      "image": "https://x/2.png"
+                    },
+                    {
+                      "image": "https://x/3.png"
+                    },
+                    {
+                      "text": "merge"
+                    }
+                  ]
+                }
+              ]
+            },
+            "parameters": {
+              "prompt_extend_mode": "direct"
+            }
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "qwen-image-2.1-pro",
+          "upstreamModel": "qwen-image-2.1-pro",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "url": "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer test-key"
+        },
+        "body": {
+          "model": "qwen-image-2.1-pro",
+          "input": {
+            "messages": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "image": "https://x/1.png"
+                  },
+                  {
+                    "image": "https://x/2.png"
+                  },
+                  {
+                    "image": "https://x/3.png"
+                  },
+                  {
+                    "text": "merge"
+                  }
+                ]
+              }
+            ]
+          },
+          "parameters": {
+            "prompt_extend_mode": "direct",
+            "n": 1
+          }
+        },
+        "action": "image_to_image"
+      }
+    },
+    {
+      "name": "qwen-image-3.0 reservation",
+      "hook": "extractUsage",
+      "args": [
+        {
+          "requestBody": {
+            "model": "qwen-image-3.0",
+            "input": {
+              "messages": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "image": "https://x/a.png"
+                    },
+                    {
+                      "text": "blue"
+                    }
+                  ]
+                }
+              ]
+            },
+            "parameters": {
+              "size": "1024*1024"
+            }
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "qwen-image-3.0",
+          "upstreamModel": "qwen-image-3.0",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "image_count": 1,
+        "output_image_type": "qima_output_1k",
+        "input_image_count": 1
+      }
+    },
+    {
+      "name": "wan2.6-image edit request",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "wan2.6-image",
+            "input": {
+              "messages": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "image": "https://x/a.png"
+                    },
+                    {
+                      "text": "hat"
+                    }
+                  ]
+                }
+              ]
+            },
+            "parameters": {
+              "size": "1K"
+            }
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "wan2.6-image",
+          "upstreamModel": "wan2.6-image",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "url": "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer test-key"
+        },
+        "body": {
+          "model": "wan2.6-image",
+          "input": {
+            "messages": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "image": "https://x/a.png"
+                  },
+                  {
+                    "text": "hat"
+                  }
+                ]
+              }
+            ]
+          },
+          "parameters": {
+            "size": "1K",
+            "n": 1
+          }
+        },
+        "action": "image_to_image"
+      }
+    },
+    {
+      "name": "wan2.6-image without a reference image",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "wan2.6-image",
+            "input": {
+              "messages": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "text": "hat"
+                    }
+                  ]
+                }
+              ]
+            },
+            "parameters": {}
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "wan2.6-image",
+          "upstreamModel": "wan2.6-image",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expectedError": "wan2.6-image edits images: send 1 to 4 input images, or use "
+    },
+    {
+      "name": "wan2.6-t2i async image-generation request",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "wan2.6-t2i",
+            "mode": "async",
+            "input": {
+              "messages": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "text": "a cat"
+                    }
+                  ]
+                }
+              ]
+            },
+            "parameters": {
+              "size": "1280*1280"
+            }
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "wan2.6-t2i",
+          "upstreamModel": "wan2.6-t2i",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "url": "https://dashscope.aliyuncs.com/api/v1/services/aigc/image-generation/generation",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer test-key",
+          "X-DashScope-Async": "enable"
+        },
+        "body": {
+          "model": "wan2.6-t2i",
+          "input": {
+            "messages": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "text": "a cat"
+                  }
+                ]
+              }
+            ]
+          },
+          "parameters": {
+            "size": "1280*1280",
+            "n": 1
+          }
+        },
+        "action": "text_to_image"
+      }
+    },
+    {
+      "name": "wan2.5-t2i-preview text2image request",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "wan2.5-t2i-preview",
+            "input": {
+              "messages": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "text": "a cat"
+                    }
+                  ]
+                }
+              ]
+            },
+            "parameters": {
+              "negative_prompt": "dogs",
+              "size": "1280*1280",
+              "prompt_extend": false
+            }
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "wan2.5-t2i-preview",
+          "upstreamModel": "wan2.5-t2i-preview",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "url": "https://dashscope.aliyuncs.com/api/v1/services/aigc/text2image/image-synthesis",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer test-key",
+          "X-DashScope-Async": "enable"
+        },
+        "body": {
+          "model": "wan2.5-t2i-preview",
+          "input": {
+            "prompt": "a cat",
+            "negative_prompt": "dogs"
+          },
+          "parameters": {
+            "size": "1280*1280",
+            "prompt_extend": false,
+            "n": 1
+          }
+        },
+        "action": "text_to_image"
+      }
+    },
+    {
+      "name": "wan2.5-i2i-preview image2image request",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "wan2.5-i2i-preview",
+            "input": {
+              "messages": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "image": "https://x/a.png"
+                    },
+                    {
+                      "text": "watercolor"
+                    }
+                  ]
+                }
+              ]
+            },
+            "parameters": {}
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "wan2.5-i2i-preview",
+          "upstreamModel": "wan2.5-i2i-preview",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "url": "https://dashscope.aliyuncs.com/api/v1/services/aigc/image2image/image-synthesis",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer test-key",
+          "X-DashScope-Async": "enable"
+        },
+        "body": {
+          "model": "wan2.5-i2i-preview",
+          "input": {
+            "prompt": "watercolor",
+            "images": [
+              "https://x/a.png"
+            ]
+          },
+          "parameters": {
+            "n": 1
+          }
+        },
+        "action": "image_to_image"
+      }
+    },
+    {
+      "name": "wan2.5-i2i-preview without an image",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "wan2.5-i2i-preview",
+            "input": {
+              "messages": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "text": "x"
+                    }
+                  ]
+                }
+              ]
+            },
+            "parameters": {}
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "wan2.5-i2i-preview",
+          "upstreamModel": "wan2.5-i2i-preview",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expectedError": "wan2.5-i2i-preview requires 1 to 3 input images"
+    },
+    {
+      "name": "async image submit reply",
+      "hook": "parseSubmitResponse",
+      "args": [
+        {
+          "requestBody": {
+            "model": "wan2.5-i2i-preview",
+            "input": {
+              "messages": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "image": "https://x/a.png"
+                    },
+                    {
+                      "text": "watercolor"
+                    }
+                  ]
+                }
+              ]
+            },
+            "parameters": {}
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "wan2.5-i2i-preview",
+          "upstreamModel": "wan2.5-i2i-preview",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        },
+        {
+          "statusCode": 200,
+          "headers": {},
+          "body": {
+            "request_id": "r",
+            "output": {
+              "task_id": "img-1",
+              "task_status": "PENDING"
+            }
+          }
+        }
+      ],
+      "expected": {
+        "taskId": "img-1",
+        "taskData": {
+          "request_id": "r",
+          "output": {
+            "task_id": "img-1",
+            "task_status": "PENDING"
+          }
+        }
+      }
+    },
+    {
+      "name": "async image task succeeded",
+      "hook": "parseTaskResult",
+      "args": [
+        {
+          "taskId": "img-1",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "model": "wan2.5-i2i-preview",
+          "upstreamModel": "wan2.5-i2i-preview"
+        },
+        {
+          "output": {
+            "task_status": "SUCCEEDED",
+            "results": [
+              {
+                "url": "https://oss.example/1.png"
+              }
+            ]
+          },
+          "usage": {
+            "image_count": 1
+          }
+        },
+        {
+          "status": 200,
+          "headers": {}
+        }
+      ],
+      "expected": {
+        "status": "SUCCESS",
+        "progress": "100%",
+        "url": "https://oss.example/1.png"
+      }
+    },
+    {
+      "name": "async image task settles",
+      "hook": "extractUsageOnComplete",
+      "args": [
+        {
+          "taskId": "img-1",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "model": "wan2.5-i2i-preview",
+          "upstreamModel": "wan2.5-i2i-preview"
+        },
+        {
+          "status": "SUCCESS"
+        },
+        {
+          "output": {
+            "task_status": "SUCCEEDED",
+            "results": [
+              {
+                "url": "https://oss.example/1.png"
+              }
+            ]
+          },
+          "usage": {
+            "image_count": 1
+          }
+        }
+      ],
+      "expected": {
+        "image_count": 1
+      }
+    },
+    {
+      "name": "wan2.7-t2v request",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "wan2.7-t2v",
+            "input": {
+              "prompt": "a fox",
+              "audio_url": "https://x/a.mp3"
+            },
+            "parameters": {
+              "resolution": "720P",
+              "duration": 2
+            }
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "wan2.7-t2v",
+          "upstreamModel": "wan2.7-t2v",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "url": "https://dashscope.aliyuncs.com/api/v1/services/aigc/video-generation/video-synthesis",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer test-key",
+          "X-DashScope-Async": "enable"
+        },
+        "body": {
+          "model": "wan2.7-t2v",
+          "input": {
+            "prompt": "a fox",
+            "audio_url": "https://x/a.mp3"
+          },
+          "parameters": {
+            "resolution": "720P",
+            "duration": 2,
+            "ratio": "16:9"
+          }
+        },
+        "action": "text_to_video"
+      }
+    },
+    {
+      "name": "wan2.7-i2v request with frames and audio",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "wan2.7-i2v",
+            "input": {
+              "prompt": "run",
+              "audio_url": "https://x/a.mp3"
+            },
+            "parameters": {
+              "resolution": "720P"
+            },
+            "images": [
+              "https://x/1.png",
+              "https://x/2.png"
+            ]
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "wan2.7-i2v",
+          "upstreamModel": "wan2.7-i2v",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "url": "https://dashscope.aliyuncs.com/api/v1/services/aigc/video-generation/video-synthesis",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer test-key",
+          "X-DashScope-Async": "enable"
+        },
+        "body": {
+          "model": "wan2.7-i2v",
+          "input": {
+            "prompt": "run",
+            "media": [
+              {
+                "type": "first_frame",
+                "url": "https://x/1.png"
+              },
+              {
+                "type": "last_frame",
+                "url": "https://x/2.png"
+              },
+              {
+                "type": "driving_audio",
+                "url": "https://x/a.mp3"
+              }
+            ]
+          },
+          "parameters": {
+            "resolution": "720P",
+            "duration": 5
+          }
+        },
+        "action": "image_to_video"
+      }
+    },
+    {
+      "name": "wan2.6-t2v sends a pixel size",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "wan2.6-t2v",
+            "input": {
+              "prompt": "a fox"
+            },
+            "parameters": {
+              "resolution": "720P",
+              "ratio": "4:3",
+              "duration": 2,
+              "shot_type": "multi"
+            }
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "wan2.6-t2v",
+          "upstreamModel": "wan2.6-t2v",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "url": "https://dashscope.aliyuncs.com/api/v1/services/aigc/video-generation/video-synthesis",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer test-key",
+          "X-DashScope-Async": "enable"
+        },
+        "body": {
+          "model": "wan2.6-t2v",
+          "input": {
+            "prompt": "a fox"
+          },
+          "parameters": {
+            "duration": 2,
+            "shot_type": "multi",
+            "size": "1088*832"
+          }
+        },
+        "action": "text_to_video"
+      }
+    },
+    {
+      "name": "wan2.5-t2v-preview reservation from a native size",
+      "hook": "extractUsage",
+      "args": [
+        {
+          "requestBody": {
+            "model": "wan2.5-t2v-preview",
+            "input": {
+              "prompt": "x"
+            },
+            "parameters": {
+              "size": "832*480",
+              "duration": 5
+            }
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "wan2.5-t2v-preview",
+          "upstreamModel": "wan2.5-t2v-preview",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "seconds": 5,
+        "resolution": "480P"
+      }
+    },
+    {
+      "name": "wan2.6-i2v-flash request",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "wan2.6-i2v-flash",
+            "input": {
+              "prompt": "run"
+            },
+            "parameters": {
+              "resolution": "720P",
+              "duration": 2,
+              "audio": false
+            },
+            "images": [
+              "https://x/a.png"
+            ]
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "wan2.6-i2v-flash",
+          "upstreamModel": "wan2.6-i2v-flash",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "url": "https://dashscope.aliyuncs.com/api/v1/services/aigc/video-generation/video-synthesis",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer test-key",
+          "X-DashScope-Async": "enable"
+        },
+        "body": {
+          "model": "wan2.6-i2v-flash",
+          "input": {
+            "prompt": "run",
+            "img_url": "https://x/a.png"
+          },
+          "parameters": {
+            "resolution": "720P",
+            "duration": 2,
+            "audio": false
+          }
+        },
+        "action": "image_to_video"
+      }
+    },
+    {
+      "name": "wan2.6-i2v-flash reservation prices audio",
+      "hook": "extractUsage",
+      "args": [
+        {
+          "requestBody": {
+            "model": "wan2.6-i2v-flash",
+            "input": {
+              "prompt": "run"
+            },
+            "parameters": {
+              "resolution": "720P",
+              "duration": 2,
+              "audio": false
+            },
+            "images": [
+              "https://x/a.png"
+            ]
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "wan2.6-i2v-flash",
+          "upstreamModel": "wan2.6-i2v-flash",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "seconds": 2,
+        "resolution": "720P",
+        "audio": false
+      }
+    },
+    {
+      "name": "wan2.5-i2v-preview duration",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "wan2.5-i2v-preview",
+            "input": {
+              "img_url": "https://x/a.png"
+            },
+            "parameters": {
+              "duration": 3
+            }
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "wan2.5-i2v-preview",
+          "upstreamModel": "wan2.5-i2v-preview",
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expectedError": "wan2.5-i2v-preview duration must be one of 5, 10"
+    },
+    {
+      "name": "wan2.6-i2v-flash settles audio",
+      "hook": "extractUsageOnComplete",
+      "args": [
+        {
+          "model": "wan2.6-i2v-flash",
+          "upstreamModel": "wan2.6-i2v-flash"
+        },
+        {
+          "status": "SUCCESS"
+        },
+        {
+          "output": {},
+          "usage": {
+            "duration": 2,
+            "SR": 720,
+            "audio": false
+          }
+        }
+      ],
+      "expected": {
+        "seconds": 2,
+        "resolution": "720P",
+        "audio": false
+      }
+    },
+    {
+      "name": "wan2.5-t2v-preview settles video_duration",
+      "hook": "extractUsageOnComplete",
+      "args": [
+        {
+          "model": "wan2.5-t2v-preview",
+          "upstreamModel": "wan2.5-t2v-preview"
+        },
+        {
+          "status": "SUCCESS"
+        },
+        {
+          "output": {},
+          "usage": {
+            "video_duration": 5,
+            "video_ratio": "832*480"
+          }
+        }
+      ],
+      "expected": {
+        "seconds": 5,
+        "resolution": "480P"
+      }
+    },
+    {
+      "name": "pay-as-you-go model list adds unlisted task models",
+      "hook": "convertResponse",
+      "args": [
+        {
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "path": "/v1/models",
+          "config": {},
+          "state": null
+        },
+        {
+          "status": 200,
+          "headers": {},
+          "body": "{\"data\":[{\"id\":\"qwen3.8-max\"},{\"id\":\"z-image-turbo\"}],\"has_more\":false}"
+        }
+      ],
+      "expected": {
+        "body": {
+          "object": "list",
+          "data": [
+            {
+              "id": "qwen3.8-max",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "z-image-turbo",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "qwen-image-3.0-pro",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "qwen-image-3.0",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "qwen-image-2.1-pro",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "qwen-image-2.0-pro",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "qwen-image-2.0-pro-2026-06-22",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "qwen-image-2.0-pro-2026-04-22",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "qwen-image-2.0-pro-2026-03-03",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "qwen-image-2.0",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "qwen-image-2.0-2026-03-03",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "wan2.7-image-pro",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "wan2.7-image",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "wan2.6-image",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "wan2.6-t2i",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "wan2.5-t2i-preview",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "wan2.5-i2i-preview",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "wan3.0-video",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "wan3.0-video-prime",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "happyhorse-1.1-t2v",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "happyhorse-1.1-i2v",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "happyhorse-1.1-r2v",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "wan2.7-t2v",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "wan2.7-t2v-2026-06-12",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "wan2.7-t2v-2026-04-25",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "wan2.7-i2v",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "wan2.7-i2v-2026-04-25",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "wan2.6-t2v",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "wan2.5-t2v-preview",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "wan2.6-i2v",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "wan2.6-i2v-flash",
+              "object": "model",
+              "owned_by": "bailian"
+            },
+            {
+              "id": "wan2.5-i2v-preview",
+              "object": "model",
+              "owned_by": "bailian"
+            }
+          ]
+        },
+        "contentType": "application/json"
+      }
+    },
+    {
+      "name": "new_api: image request goes to the middle gateway",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "wan2.7-image",
+            "input": {
+              "messages": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "text": "a cat"
+                    }
+                  ]
+                }
+              ]
+            },
+            "parameters": {
+              "n": 1,
+              "size": "1024x1024"
+            }
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "wan2.7-image",
+          "upstreamModel": "wan2.7-image",
+          "baseUrl": "http://middle.example:3000",
+          "apiKey": "sk-gateway",
+          "authHeader": "Bearer sk-gateway",
+          "upstream": {
+            "kind": "new_api"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "url": "http://middle.example:3000/byaiden_bailian/api/v1/services/aigc/multimodal-generation/generation",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer sk-gateway"
+        },
+        "body": {
+          "model": "wan2.7-image",
+          "input": {
+            "messages": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "text": "a cat"
+                  }
+                ]
+              }
+            ]
+          },
+          "parameters": {
+            "n": 1,
+            "size": "1024*1024"
+          }
+        },
+        "action": "text_to_image"
+      }
+    },
+    {
+      "name": "new_api: video request goes to the middle gateway",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "wan3.0-video",
+            "input": {
+              "prompt": "a fox"
+            },
+            "parameters": {
+              "duration": 2,
+              "resolution": "480P",
+              "ratio": "16:9"
+            }
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "wan3.0-video",
+          "upstreamModel": "wan3.0-video",
+          "baseUrl": "http://middle.example:3000",
+          "apiKey": "sk-gateway",
+          "authHeader": "Bearer sk-gateway",
+          "upstream": {
+            "kind": "new_api"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "url": "http://middle.example:3000/byaiden_bailian/api/v1/services/aigc/video-generation/video-synthesis",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer sk-gateway"
+        },
+        "body": {
+          "model": "wan3.0-video",
+          "input": {
+            "prompt": "a fox"
+          },
+          "parameters": {
+            "duration": 2,
+            "resolution": "480P",
+            "ratio": "16:9"
+          }
+        },
+        "action": "text_to_video"
+      }
+    },
+    {
+      "name": "new_api: legacy image task request",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "wan2.5-t2i-preview",
+            "input": {
+              "messages": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "text": "x"
+                    }
+                  ]
+                }
+              ]
+            },
+            "parameters": {}
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "wan2.5-t2i-preview",
+          "upstreamModel": "wan2.5-t2i-preview",
+          "baseUrl": "http://middle.example:3000",
+          "apiKey": "sk-gateway",
+          "authHeader": "Bearer sk-gateway",
+          "upstream": {
+            "kind": "new_api"
+          },
+          "config": {},
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "url": "http://middle.example:3000/byaiden_bailian/api/v1/services/aigc/text2image/image-synthesis",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer sk-gateway"
+        },
+        "body": {
+          "model": "wan2.5-t2i-preview",
+          "input": {
+            "prompt": "x"
+          },
+          "parameters": {
+            "n": 1
+          }
+        },
+        "action": "text_to_image"
+      }
+    },
+    {
+      "name": "new_api: query on the middle gateway's task route",
+      "hook": "buildQueryRequest",
+      "args": [
+        {
+          "taskId": "task_middle",
+          "baseUrl": "http://middle.example:3000",
+          "apiKey": "sk-gateway",
+          "authHeader": "Bearer sk-gateway",
+          "upstream": {
+            "kind": "new_api"
+          },
+          "model": "wan3.0-video",
+          "upstreamModel": "wan3.0-video"
+        }
+      ],
+      "expected": {
+        "url": "http://middle.example:3000/byaiden_bailian/api/v1/tasks/task_middle",
+        "method": "GET",
+        "headers": {
+          "Authorization": "Bearer sk-gateway"
+        }
+      }
+    },
+    {
+      "name": "new_api: middle gateway task reply succeeds",
+      "hook": "parseTaskResult",
+      "args": [
+        {
+          "taskId": "task_middle",
+          "baseUrl": "http://middle.example:3000",
+          "apiKey": "sk-gateway",
+          "authHeader": "Bearer sk-gateway",
+          "upstream": {
+            "kind": "new_api"
+          },
+          "model": "wan3.0-video",
+          "upstreamModel": "wan3.0-video"
+        },
+        {
+          "request_id": "r1",
+          "output": {
+            "task_id": "task_middle",
+            "task_status": "SUCCEEDED",
+            "video_url": "http://middle.example:3000/v1/videos/task_middle/content?sig=1"
+          },
+          "usage": {
+            "output_video_duration": 4,
+            "input_video_duration": 0,
+            "SR": 480,
+            "duration": 4
+          }
+        },
+        {
+          "status": 200,
+          "headers": {}
+        }
+      ],
+      "expected": {
+        "status": "SUCCESS",
+        "progress": "100%",
+        "url": "http://middle.example:3000/v1/videos/task_middle/content?sig=1"
+      }
+    },
+    {
+      "name": "new_api: middle gateway task reply settles",
+      "hook": "extractUsageOnComplete",
+      "args": [
+        {
+          "taskId": "task_middle",
+          "baseUrl": "http://middle.example:3000",
+          "apiKey": "sk-gateway",
+          "authHeader": "Bearer sk-gateway",
+          "upstream": {
+            "kind": "new_api"
+          },
+          "model": "wan3.0-video",
+          "upstreamModel": "wan3.0-video"
+        },
+        {
+          "status": "SUCCESS"
+        },
+        {
+          "request_id": "r1",
+          "output": {
+            "task_id": "task_middle",
+            "task_status": "SUCCEEDED",
+            "video_url": "http://middle.example:3000/v1/videos/task_middle/content?sig=1"
+          },
+          "usage": {
+            "output_video_duration": 4,
+            "input_video_duration": 0,
+            "SR": 480,
+            "duration": 4
+          }
+        }
+      ],
+      "expected": {
+        "seconds": 4,
+        "resolution": "480P"
+      }
+    }
+  ]
+}
