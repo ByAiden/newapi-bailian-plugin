@@ -19,7 +19,7 @@ locale: zh-CN
 
 ## 渠道设置
 
-1. 安装插件后，新建**一个**「任务插件」类型的渠道并绑定本插件。选择插件时渠道模型列表会填入下面所有模型。填好 Key 后点「获取模型列表」，会换成该 Key 实际可用的模型：百炼列出的模型，再加上本插件的全部图片和视频模型（百炼的模型列表不列视频模型和万相 2.6 / 2.5 图片模型，但这个 Key 可以调用）。实时语音等本插件不支持的模型会被过滤掉。
+1. 安装插件后，新建**一个**「任务插件」类型的渠道并绑定本插件。选择插件时渠道模型列表会预填下面的文本、图片、视频、语音合成和语音识别模型；向量模型（`text-embedding-v4`）不预填，因为普通 OpenAI 渠道的调用方式和计费与本插件完全相同，需要时用「获取模型列表」或按名称添加。填好 Key 后点「获取模型列表」，会换成该 Key 实际可用的模型：百炼列出的模型，再加上本插件的全部图片和视频模型（百炼的模型列表不列视频模型和万相 2.6 / 2.5 图片模型，但这个 Key 可以调用）。实时语音等本插件不支持的模型会被过滤掉。
 2. Base URL 与 Key。请填 Key 所属站点的地址，把 Key 发到另一个站点会鉴权失败。
 
 | 站点 | Base URL | Key |
@@ -54,7 +54,7 @@ locale: zh-CN
 | 类型 | 模型 |
 | --- | --- |
 | 文本 | `qwen4-max`、`qwen4-max-preview`、`qwen3.8-max`、`qwen3.8-flash`、`qwen3.7-max`、`qwen3.7-plus`、`qwen3.6-plus`、`qwen3.6-flash`、`deepseek-v4.1-flash`、`deepseek-v4.1-flash-1017`、`deepseek-v4-pro`、`deepseek-v4-pro-0813`、`deepseek-v4-flash-0731`、`glm-5.3`、`glm-5.2`、`glm-5.1`、`glm-5`、`kimi-k2.7-code`、`kimi-k2.6`、`kimi-k2.5`，以及按名称加到渠道的其他文本模型 |
-| 向量 | `text-embedding-v4`，或按名称加到渠道的其他向量模型 |
+| 向量 | `text-embedding-v4`（不预填，「获取模型列表」会返回），或按名称加到渠道的其他向量模型 |
 | 图片 | `qwen-image-3.0-pro`、`qwen-image-3.0`、`qwen-image-2.1-pro`、`qwen-image-2.0-pro`、`qwen-image-2.0-pro-2026-06-22`、`qwen-image-2.0-pro-2026-04-22`、`qwen-image-2.0-pro-2026-03-03`、`qwen-image-2.0`、`qwen-image-2.0-2026-03-03`、`z-image-turbo`、`wan2.7-image-pro`、`wan2.7-image`、`wan2.6-image`、`wan2.6-t2i`、`wan2.5-t2i-preview`、`wan2.5-i2i-preview` |
 | 视频 | `wan3.0-video`、`wan3.0-video-prime`、`happyhorse-1.1-t2v`、`happyhorse-1.1-i2v`、`happyhorse-1.1-r2v`、`wan2.7-t2v`、`wan2.7-t2v-2026-06-12`、`wan2.7-t2v-2026-04-25`、`wan2.7-i2v`、`wan2.7-i2v-2026-04-25`、`wan2.6-t2v`、`wan2.6-i2v`、`wan2.6-i2v-flash`、`wan2.5-t2v-preview`、`wan2.5-i2v-preview` |
 | 语音合成 | `qwen-audio-3.0-tts-plus` |

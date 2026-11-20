@@ -21,7 +21,7 @@ Requires new-api v1.0.0-rc.50 or later (provider plugins with usage profiles). T
 
 ## Channel setup
 
-1. Install the plugin, then add ONE channel of type Task Plugin and bind it to this plugin. Selecting the plugin fills the channel model list with every model below. After saving the key, Fetch models replaces it with the models your key can use: the models Bailian lists plus every image and video model of this plugin (Bailian's list leaves out video and the Wan 2.6 / 2.5 image models although the key can call them). Models without a route here, such as realtime speech, are left out.
+1. Install the plugin, then add ONE channel of type Task Plugin and bind it to this plugin. Selecting the plugin fills the channel model list with the text, image, video, speech and transcription models below; embedding models (`text-embedding-v4`) are not pre-filled, because an ordinary OpenAI channel serves them the same way: add them with Fetch models or by name. After saving the key, Fetch models replaces it with the models your key can use: the models Bailian lists plus every image and video model of this plugin (Bailian's list leaves out video and the Wan 2.6 / 2.5 image models although the key can call them). Models without a route here, such as realtime speech, are left out.
 2. Base URL and key. Use the address of the site your key belongs to; a key sent to the other site fails with an authentication error.
 
 | Site | Base URL | Key |
@@ -56,7 +56,7 @@ Not available on a relay, with an error before anything is sent or billed: video
 | Kind | Models |
 | --- | --- |
 | Text | `qwen4-max`, `qwen4-max-preview`, `qwen3.8-max`, `qwen3.8-flash`, `qwen3.7-max`, `qwen3.7-plus`, `qwen3.6-plus`, `qwen3.6-flash`, `deepseek-v4.1-flash`, `deepseek-v4.1-flash-1017`, `deepseek-v4-pro`, `deepseek-v4-pro-0813`, `deepseek-v4-flash-0731`, `glm-5.3`, `glm-5.2`, `glm-5.1`, `glm-5`, `kimi-k2.7-code`, `kimi-k2.6`, `kimi-k2.5`, and any other text model added to the channel by name |
-| Embeddings | `text-embedding-v4`, or any other embedding model added by name |
+| Embeddings | `text-embedding-v4` (not pre-filled; Fetch models lists it), or any other embedding model added by name |
 | Images | `qwen-image-3.0-pro`, `qwen-image-3.0`, `qwen-image-2.1-pro`, `qwen-image-2.0-pro`, `qwen-image-2.0-pro-2026-06-22`, `qwen-image-2.0-pro-2026-04-22`, `qwen-image-2.0-pro-2026-03-03`, `qwen-image-2.0`, `qwen-image-2.0-2026-03-03`, `z-image-turbo`, `wan2.7-image-pro`, `wan2.7-image`, `wan2.6-image`, `wan2.6-t2i`, `wan2.5-t2i-preview`, `wan2.5-i2i-preview` |
 | Video | `wan3.0-video`, `wan3.0-video-prime`, `happyhorse-1.1-t2v`, `happyhorse-1.1-i2v`, `happyhorse-1.1-r2v`, `wan2.7-t2v`, `wan2.7-t2v-2026-06-12`, `wan2.7-t2v-2026-04-25`, `wan2.7-i2v`, `wan2.7-i2v-2026-04-25`, `wan2.6-t2v`, `wan2.6-i2v`, `wan2.6-i2v-flash`, `wan2.5-t2v-preview`, `wan2.5-i2v-preview` |
 | Speech | `qwen-audio-3.0-tts-plus` |

@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 
 const plugin = await import("../plugin.js");
 const {
-  meta, PLUGIN_KEY, MODEL_IDS, TEXT_MODELS, EMBEDDING_MODELS, IMAGE_MODELS, VIDEO_MODELS, TTS_MODELS, ASR_MODELS,
+  meta, PLUGIN_KEY, MODEL_IDS, DEFAULT_MODEL_IDS, TEXT_MODELS, EMBEDDING_MODELS, IMAGE_MODELS, VIDEO_MODELS, TTS_MODELS, ASR_MODELS,
   buildSubmitRequest, parseSubmitResponse, extractUsage, extractUsageOnSubmit, extractUsageOnComplete, buildQueryRequest,
   parseTaskResult, listArtifacts, buildContentRequest, native, protocols, convertRequest, convertResponse, convertStreamEvent,
   checkKey, videoSize, modelListReply, servedModel, prepareRequest, upstreamType, relayTranscriptionReply,
@@ -85,7 +85,15 @@ test("manifest identity and hosts", () => {
 
 test("models match the runtime tables and keep the channel form working", () => {
   assert.ok(meta.models.length > 0);
-  assert.deepEqual(meta.models.slice().sort(), MODEL_IDS.slice().sort());
+  assert.deepEqual(meta.models, DEFAULT_MODEL_IDS);
+  for (const model of meta.models) assert.ok(MODEL_IDS.includes(model), model);
+  // Embedding models are not pre-filled but are still served and fetched.
+  for (const model of EMBEDDING_MODELS) {
+    assert.ok(!meta.models.includes(model), model);
+    assert.ok(MODEL_IDS.includes(model), model);
+    assert.equal(servedModel(model), true);
+  }
+  assert.deepEqual(MODEL_IDS.filter((m) => !meta.models.includes(m)), EMBEDDING_MODELS);
   assert.equal(new Set(meta.models).size, meta.models.length);
   for (const model of TEXT_MODELS.concat(EMBEDDING_MODELS, TTS_MODELS, ASR_MODELS)) assert.ok(!TASK_MODELS.includes(model));
   assert.ok(!MODEL_IDS.some((m) => m.startsWith("bailian-text-")));

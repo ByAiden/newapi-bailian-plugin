@@ -18,6 +18,7 @@ translations:
 
 ### Changed
 
+- Selecting the plugin no longer pre-fills the embedding model `text-embedding-v4`: embeddings go to DashScope's OpenAI-compatible endpoint unchanged and bill exactly as on an ordinary OpenAI channel. Fetch models still returns it and `/v1/embeddings` still serves it and any other embedding model added to the channel; text, image, video, speech and transcription models stay pre-filled.
 - Saving a channel no longer refuses keys by their prefix; a key that does not belong to the site gets Bailian's own authentication error. With the OpenAI-compatible relay upstream type, a blank Base URL or a bare Bailian address is refused with a hint to enter the relay's address.
 
 ### Fixed

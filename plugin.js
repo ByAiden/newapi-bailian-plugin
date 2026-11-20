@@ -58,7 +58,6 @@ export const meta = {
     "kimi-k2.7-code",
     "kimi-k2.6",
     "kimi-k2.5",
-    "text-embedding-v4",
     "qwen-image-3.0-pro",
     "qwen-image-3.0",
     "qwen-image-2.1-pro",
@@ -482,6 +481,13 @@ export const TTS_MODELS = ["qwen-audio-3.0-tts-plus"];
 export const ASR_MODELS = ["qwen-audio-3.0-asr-flash"];
 
 export const MODEL_IDS = [].concat(TEXT_MODELS, EMBEDDING_MODELS, Object.keys(IMAGE_MODELS), Object.keys(VIDEO_MODELS), TTS_MODELS, ASR_MODELS);
+
+// The models a channel gets when it selects this plugin (meta.models). Embedding
+// models are left out: /v1/embeddings goes to DashScope's OpenAI-compatible
+// path unchanged and is billed by the host from the reply's usage, exactly as on
+// an ordinary OpenAI channel. They still come back from Fetch models and the
+// route serves any model name added to the channel.
+export const DEFAULT_MODEL_IDS = [].concat(TEXT_MODELS, Object.keys(IMAGE_MODELS), Object.keys(VIDEO_MODELS), TTS_MODELS, ASR_MODELS);
 
 const SPEECH_PATH = "/v1/audio/speech";
 const MODELS_PATH = "/v1/models";
