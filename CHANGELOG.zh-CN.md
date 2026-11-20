@@ -1,21 +1,23 @@
 ---
 changelogVersion: 1
 plugin: byaiden_bailian
-version: 1.3.0
+version: 1.4.0
 locale: "zh-CN"
 ---
 
 # Changelog
 
-## [1.3.0]
+## [1.4.0]
 
 ### Added
 
-- 用一个任务插件渠道和一个百炼 API Key 接入阿里云百炼，支持北京站和国际站 DashScope 地址。
-- 文本透传 OpenAI Chat Completions、OpenAI Responses、Claude Messages 和 Embeddings，支持流式，覆盖千问、DeepSeek、GLM、Kimi；其他百炼文本模型按名称加到渠道即可使用。
-- 图片：千问图像 3.0 与 3.0 Pro、2.1 Pro、2.0 与 2.0 Pro 及其日期版本，Z-Image Turbo，万相 2.7、2.6、2.5 图片模型，支持 OpenAI 图片接口和 DashScope 图片接口，按实际交付张数计费。
-- 视频：万相 3.0 及 Prime、HappyHorse 1.1、万相 2.7（含日期版本）、万相 2.6（含 flash）和万相 2.5 预览版，支持 OpenAI 视频接口和 DashScope 视频、任务接口，按秒和分辨率计费，按百炼返回的秒数结算。
-- 语音合成：Qwen-Audio 3.0 TTS Plus 走 OpenAI 语音接口，直接返回音频，可设渠道默认音色；语音识别：Qwen-Audio 3.0 ASR Flash 走 OpenAI 转写接口。
-- 「获取模型列表」从百炼读取该 Key 可用的模型，只保留本插件能服务的模型，并补上百炼列表中缺失的视频和图片模型。
-- 支持经由另一个 New API 网关：外层网关的 New API（60）渠道可绑定本插件，图片、视频任务用同样的表达式定价。
-- README 附百炼标价的现成计费表达式。
+- 渠道设置「上游类型」：百炼官方 API（默认，行为与之前一致）或 OpenAI 兼容中转。选中转时 Base URL 填中转根地址、Key 填中转的 Key：Chat Completions、Responses、Claude Messages 和 Embeddings 发往中转的 `/v1/...` 路径，模型名原样发送，按中转返回的 usage 计费；图片生成走中转的 `/v1/images/generations`；语音合成和语音识别走中转的 `/v1/audio/speech`、`/v1/audio/transcriptions`；「获取模型列表」返回中转 `/v1/models` 的列表。
+- 中转模式下视频模型、图片编辑（输入图片）和 DashScope 原生接口会直接报错说明原因，不会发出请求，也不计费。
+
+### Changed
+
+- 保存渠道时不再按 Key 前缀拒绝 Key；Key 与站点不匹配时由百炼返回其鉴权错误。上游类型为 OpenAI 兼容中转时，Base URL 留空或填百炼地址根路径会被拒绝，并提示填写中转地址。
+
+### Fixed
+
+- README 中 `z-image-turbo` 和 `wan2.6-i2v-flash` 的计费表达式改为 `u("prompt_extend") == true`、`u("audio") == true` 的写法，模型广场详情页能展开为价格表；计费结果与原表达式完全相同。

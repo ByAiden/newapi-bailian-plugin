@@ -59,7 +59,32 @@ add("speech JSON reply is refused", "convertResponse", [Object.assign({ state: s
 const actx = { baseUrl: BASE, path: "/v1/audio/transcriptions", config: {} };
 add("transcription request", "convertRequest", [actx, { model: "qwen-audio-3.0-asr-flash", stream: false, form: { fields: { model: ["qwen-audio-3.0-asr-flash"], language: ["zh"] }, files: [{ field: "file", filename: "a.mp3", contentType: "audio/mpeg", size: 9 }] } }]);
 add("transcription reply", "convertResponse", [Object.assign({ state: { kind: "transcription", responseFormat: "json" } }, actx), { status: 200, headers: {}, body: JSON.stringify({ output: { choices: [{ message: { content: [{ text: "你好" }] } }] }, usage: { duration: 1.4 } }) }]);
-add("sk-sp key on the Beijing host", "checkKey", [{ baseUrl: "https://dashscope.aliyuncs.com", config: {} }, "sk-sp-x"]);
+add("an empty key is refused", "checkKey", [{ baseUrl: "https://dashscope.aliyuncs.com", config: {} }, " "]);
+add("a Bailian key on the Beijing host", "checkKey", [{ baseUrl: "https://dashscope.aliyuncs.com", config: {} }, "sk-x"]);
+// 1.4.0: OpenAI-compatible relay upstream.
+const RELAY = "https://relay.example.com";
+const rcfg = { upstreamType: "openai" };
+const rdrv = (requestBody, extra) => drv(requestBody, Object.assign({ baseUrl: RELAY, apiKey: "relay-key", config: rcfg }, extra || {}));
+add("Bailian chat keeps its route path", "prepareRequest", [{ baseUrl: BASE, path: "/v1/chat/completions", config: {} }, { path: "/v1/chat/completions", upstreamPath: "/compatible-mode/v1/chat/completions", model: "qwen-plus", stream: false, body: { model: "qwen-plus" }, headers: {} }]);
+add("relay chat goes to /v1/chat/completions", "prepareRequest", [{ baseUrl: RELAY, path: "/v1/chat/completions", config: rcfg }, { path: "/v1/chat/completions", upstreamPath: "/compatible-mode/v1/chat/completions", model: "qwen-plus", stream: true, body: { model: "qwen-plus", stream: true }, headers: {} }]);
+add("relay Claude messages go to /v1/messages", "prepareRequest", [{ baseUrl: RELAY, path: "/v1/messages", config: rcfg }, { path: "/v1/messages", upstreamPath: "/apps/anthropic/v1/messages", model: "qwen-plus", stream: false, body: { model: "qwen-plus" }, headers: {} }]);
+const rimg = { model: "wan2.7-image", input: { messages: [{ role: "user", content: [{ text: "a cat" }] }] }, parameters: { n: 2, size: "1024*1024" } };
+add("relay image generation request", "buildSubmitRequest", [rdrv(rimg)]);
+add("relay image reservation", "extractUsage", [rdrv(rimg)]);
+add("relay image reply completes immediately", "parseSubmitResponse", [rdrv(rimg), { statusCode: 200, headers: {}, body: { created: 1, data: [{ url: "https://cdn.relay.example/a.png" }, { b64_json: "iVBORw0KGgo=" }] } }]);
+addError("relay refuses video", "buildSubmitRequest", [rdrv(wan)]);
+addError("relay refuses input images", "buildSubmitRequest", [rdrv({ model: "wan2.7-image", input: { messages: [{ role: "user", content: [{ image: "https://x/a.png" }, { text: "x" }] }] }, parameters: {} })]);
+const rsctx = { baseUrl: RELAY, path: "/v1/audio/speech", config: rcfg };
+add("relay speech request", "convertRequest", [rsctx, { model: "qwen-audio-3.0-tts-plus", stream: false, body: { model: "my-tts", input: "你好", voice: "alloy" } }]);
+add("relay speech error", "convertResponse", [Object.assign({ state: { kind: "speech", relay: true } }, rsctx), { status: 429, headers: {}, body: JSON.stringify({ error: { message: "slow down", code: "rate_limit" } }) }]);
+const ractx = { baseUrl: RELAY, path: "/v1/audio/transcriptions", config: rcfg };
+add("relay transcription request", "convertRequest", [ractx, { model: "qwen-audio-3.0-asr-flash", stream: false, form: { fields: { model: ["x"], response_format: ["verbose_json"] }, files: [{ field: "file", filename: "a.mp3", contentType: "audio/mpeg", size: 9 }] } }]);
+add("relay transcription bills seconds", "convertResponse", [Object.assign({ state: { kind: "transcription", relay: true, responseFormat: "verbose_json" } }, ractx), { status: 200, headers: {}, body: JSON.stringify({ text: "你好", duration: 2.2 }) }]);
+const rmctx = { baseUrl: RELAY, path: "/v1/models", config: rcfg };
+add("relay model list chains to /v1/models", "convertResponse", [Object.assign({ state: null }, rmctx), { status: 404, headers: {}, body: "" }]);
+add("relay model list as the relay returns it", "convertResponse", [Object.assign({ state: { kind: "models", relay: true, ids: [], pages: 0 } }, rmctx), { status: 200, headers: {}, body: JSON.stringify({ data: [{ id: "gpt-5.5" }, { id: "wan3.0-video" }] }) }]);
+add("relay key check refuses a bare Bailian host", "checkKey", [{ baseUrl: "https://dashscope.aliyuncs.com", config: rcfg }, "relay-key"]);
+add("relay key check accepts the relay", "checkKey", [{ baseUrl: RELAY, config: rcfg }, "relay-key"]);
 // 1.1.0: pay-as-you-go image and video families.
 const PAYG = "https://dashscope.aliyuncs.com";
 const pdrv = (requestBody, extra) => drv(requestBody, Object.assign({ baseUrl: PAYG }, extra || {}));

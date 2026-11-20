@@ -15,6 +15,7 @@ Serves Alibaba Cloud Bailian (Model Studio) text, image, video, speech and trans
 - Video: OpenAI videos and the DashScope video endpoints, for Wan 3.0 (and Prime), Wan 2.7, 2.6 and 2.5, and HappyHorse 1.1.
 - Speech: OpenAI speech for Qwen-Audio TTS, answered with the audio file.
 - Transcription: OpenAI transcriptions for Qwen-Audio ASR.
+- Upstream type: the Bailian API (default), or any OpenAI-compatible relay for text, embeddings, image generation, speech and transcription (see OpenAI-compatible relay).
 
 Requires new-api v1.0.0-rc.50 or later (provider plugins with usage profiles). The plugin key is `byaiden_bailian`.
 
@@ -31,9 +32,24 @@ Requires new-api v1.0.0-rc.50 or later (provider plugins with usage profiles). T
    A workspace address such as `https://WORKSPACE_ID.cn-beijing.maas.aliyuncs.com` also works; Fetch models then lists only what Bailian returns, so add video models by hand.
 3. Models: see the tables below. For other text models (for example `qwen3-max` or `qwen-plus`), add the model name to the channel as it is, or publish your own name and map it in the channel model mapping (`{"my-model": "qwen-plus"}`). The text endpoints pass any model through. Image and video requests must use one of the image or video models below, or a name mapped to one.
 4. Default voice (channel setting): the Qwen-Audio voice used when a speech request names an OpenAI voice (`alloy`, `nova` and the others) or none. Default `longanhuan_v3.6`. See the Bailian voice list for the voices of each model.
-5. Set prices (see Billing). The channel test button sends a chat request with the test model; pick a text model for it.
+5. Upstream type (channel setting): `Bailian API` (default) for the DashScope hosts above, or `OpenAI-compatible relay` for a relay in front of Bailian (see OpenAI-compatible relay).
+6. Set prices (see Billing). The channel test button sends a chat request with the test model; pick a text model for it.
 
 The built-in `alibaba` plugin serves some of the same image and video models and native paths on channels of the built-in Alibaba Bailian type. Both can be installed; the channel chosen for a request decides which plugin runs it.
+
+## OpenAI-compatible relay
+
+Set Upstream type to `OpenAI-compatible relay` when the channel should call a service that speaks OpenAI's API (another gateway, a proxy) instead of Bailian. Base URL is the relay's root, without `/v1` (for example `https://relay.example.com`); the key is the relay's key, sent as `Authorization: Bearer`. Saving refuses a blank Base URL and a bare Bailian address in this mode.
+
+| Client request | Sent to the relay | Billing |
+| --- | --- | --- |
+| `POST /v1/chat/completions`, `/v1/responses`, `/v1/messages`, `/v1/embeddings`, streaming included | the same path under the Base URL, body and model name as on any channel | the usage the relay reports, as on an OpenAI channel |
+| `POST /v1/images/generations` with an image model of this plugin | `POST /v1/images/generations` with `prompt`, `n`, `size` (`1024x1024` form) and the model's extra fields | the task expressions of Billing, settled on the images delivered |
+| `POST /v1/audio/speech` | `POST /v1/audio/speech`, as sent | characters of `input`, as on Bailian |
+| `POST /v1/audio/transcriptions` | `POST /v1/audio/transcriptions`, the same form | the audio seconds the relay reports (`json` with duration usage, or `verbose_json`) as tokens, as on Bailian; other replies pass through as sent |
+| Fetch models | `GET /v1/models` | free; the list is the relay's own, unfiltered |
+
+Not available on a relay, with an error before anything is sent or billed: video models (`/v1/videos` and the DashScope video routes), image edits and requests with input images, and the DashScope-native endpoints (`/api/v1/...`). The Default voice setting applies to the Bailian API only: on a relay the `voice` goes as sent. The upstream model name is never rewritten; use the channel model mapping when the relay names a model differently. A New API (type 60) channel ignores this setting.
 
 ## Models and endpoints
 
@@ -124,15 +140,15 @@ Images and video are billed as tasks from these usage facts: `image_count` (imag
 | `wan2.7-image-pro`, `qwen-image-2.0-pro` and its dated versions | `tier("base", u("image_count") * 0.5)` |
 | `qwen-image-3.0-pro` | `tier("base", (u("image_count") * (u("output_image_type") == "qima_output_2k" ? 0.5 : 0.25) + u("input_image_count") * 0.02))` |
 | `qwen-image-3.0` | `tier("base", (u("image_count") * 0.18 + u("input_image_count") * 0.02))` |
-| `z-image-turbo` | `tier("base", u("image_count") * (u("prompt_extend") ? 0.2 : 0.1))` |
+| `z-image-turbo` | `tier("base", u("image_count") * (u("prompt_extend") == true ? 0.2 : 0.1))` |
 | `wan3.0-video` | `tier("base", u("seconds") * (u("resolution") == "1080P" ? 1.2 : u("resolution") == "720P" ? 0.6 : 0.3))` |
 | `wan3.0-video-prime` | `tier("base", u("seconds") * (u("resolution") == "1080P" ? 1.8 : u("resolution") == "720P" ? 0.9 : 0.45))` |
 | `happyhorse-1.1-t2v`, `happyhorse-1.1-i2v`, `happyhorse-1.1-r2v` | `tier("base", u("seconds") * (u("resolution") == "1080P" ? 1.2 : u("resolution") == "720P" ? 0.9 : 0.45))` |
 | `wan2.7-t2v`, `wan2.7-i2v` and their dated versions, `wan2.6-t2v`, `wan2.6-i2v` | `tier("base", u("seconds") * (u("resolution") == "1080P" ? 1 : 0.6))` |
-| `wan2.6-i2v-flash` | `tier("base", u("seconds") * (u("audio") ? (u("resolution") == "1080P" ? 0.5 : 0.3) : (u("resolution") == "1080P" ? 0.25 : 0.15)))` |
+| `wan2.6-i2v-flash` | `tier("base", u("seconds") * (u("audio") == true ? (u("resolution") == "1080P" ? 0.5 : 0.3) : (u("resolution") == "1080P" ? 0.25 : 0.15)))` |
 | `wan2.5-t2v-preview`, `wan2.5-i2v-preview` | `tier("base", u("seconds") * (u("resolution") == "1080P" ? 1 : u("resolution") == "720P" ? 0.6 : 0.3))` |
 
-`wan3.0-video` is listed at its regular price; Bailian may run time-limited discounts.
+`wan3.0-video` is listed at its regular price; Bailian may run time-limited discounts. Each expression above shows as a price table on the model page (per resolution, per output tier, or per `prompt_extend` / `audio` value).
 
 Speech and transcription are billed by new-api as ordinary requests, so their expressions give the price per million units of `p`, again as CNY numbers:
 

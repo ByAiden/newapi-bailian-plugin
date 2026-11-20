@@ -1075,21 +1075,639 @@
       }
     },
     {
-      "name": "sk-sp key on the Beijing host",
+      "name": "an empty key is refused",
       "hook": "checkKey",
       "args": [
         {
           "baseUrl": "https://dashscope.aliyuncs.com",
           "config": {}
         },
-        "sk-sp-x"
+        " "
       ],
       "expected": {
         "error": {
-          "en": "This is not a Bailian API key, so it does not work on dashscope.aliyuncs.com. Use a Bailian API key (sk-...).",
-          "zh": "这不是百炼 API Key，不能用于 dashscope.aliyuncs.com，请填写百炼 API Key（sk-）。"
+          "en": "The key is empty.",
+          "zh": "Key 为空。"
         }
       }
+    },
+    {
+      "name": "a Bailian key on the Beijing host",
+      "hook": "checkKey",
+      "args": [
+        {
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "config": {}
+        },
+        "sk-x"
+      ],
+      "expected": null
+    },
+    {
+      "name": "Bailian chat keeps its route path",
+      "hook": "prepareRequest",
+      "args": [
+        {
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "path": "/v1/chat/completions",
+          "config": {}
+        },
+        {
+          "path": "/v1/chat/completions",
+          "upstreamPath": "/compatible-mode/v1/chat/completions",
+          "model": "qwen-plus",
+          "stream": false,
+          "body": {
+            "model": "qwen-plus"
+          },
+          "headers": {}
+        }
+      ],
+      "expected": null
+    },
+    {
+      "name": "relay chat goes to /v1/chat/completions",
+      "hook": "prepareRequest",
+      "args": [
+        {
+          "baseUrl": "https://relay.example.com",
+          "path": "/v1/chat/completions",
+          "config": {
+            "upstreamType": "openai"
+          }
+        },
+        {
+          "path": "/v1/chat/completions",
+          "upstreamPath": "/compatible-mode/v1/chat/completions",
+          "model": "qwen-plus",
+          "stream": true,
+          "body": {
+            "model": "qwen-plus",
+            "stream": true
+          },
+          "headers": {}
+        }
+      ],
+      "expected": {
+        "path": "/v1/chat/completions"
+      }
+    },
+    {
+      "name": "relay Claude messages go to /v1/messages",
+      "hook": "prepareRequest",
+      "args": [
+        {
+          "baseUrl": "https://relay.example.com",
+          "path": "/v1/messages",
+          "config": {
+            "upstreamType": "openai"
+          }
+        },
+        {
+          "path": "/v1/messages",
+          "upstreamPath": "/apps/anthropic/v1/messages",
+          "model": "qwen-plus",
+          "stream": false,
+          "body": {
+            "model": "qwen-plus"
+          },
+          "headers": {}
+        }
+      ],
+      "expected": {
+        "path": "/v1/messages"
+      }
+    },
+    {
+      "name": "relay image generation request",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "wan2.7-image",
+            "input": {
+              "messages": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "text": "a cat"
+                    }
+                  ]
+                }
+              ]
+            },
+            "parameters": {
+              "n": 2,
+              "size": "1024*1024"
+            }
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "wan2.7-image",
+          "upstreamModel": "wan2.7-image",
+          "baseUrl": "https://relay.example.com",
+          "apiKey": "relay-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {
+            "upstreamType": "openai"
+          },
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "url": "https://relay.example.com/v1/images/generations",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer relay-key"
+        },
+        "body": {
+          "model": "wan2.7-image",
+          "prompt": "a cat",
+          "n": 2,
+          "size": "1024x1024"
+        },
+        "action": "text_to_image"
+      }
+    },
+    {
+      "name": "relay image reservation",
+      "hook": "extractUsage",
+      "args": [
+        {
+          "requestBody": {
+            "model": "wan2.7-image",
+            "input": {
+              "messages": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "text": "a cat"
+                    }
+                  ]
+                }
+              ]
+            },
+            "parameters": {
+              "n": 2,
+              "size": "1024*1024"
+            }
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "wan2.7-image",
+          "upstreamModel": "wan2.7-image",
+          "baseUrl": "https://relay.example.com",
+          "apiKey": "relay-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {
+            "upstreamType": "openai"
+          },
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "image_count": 2
+      }
+    },
+    {
+      "name": "relay image reply completes immediately",
+      "hook": "parseSubmitResponse",
+      "args": [
+        {
+          "requestBody": {
+            "model": "wan2.7-image",
+            "input": {
+              "messages": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "text": "a cat"
+                    }
+                  ]
+                }
+              ]
+            },
+            "parameters": {
+              "n": 2,
+              "size": "1024*1024"
+            }
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "wan2.7-image",
+          "upstreamModel": "wan2.7-image",
+          "baseUrl": "https://relay.example.com",
+          "apiKey": "relay-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {
+            "upstreamType": "openai"
+          },
+          "publicTaskId": "task_public"
+        },
+        {
+          "statusCode": 200,
+          "headers": {},
+          "body": {
+            "created": 1,
+            "data": [
+              {
+                "url": "https://cdn.relay.example/a.png"
+              },
+              {
+                "b64_json": "iVBORw0KGgo="
+              }
+            ]
+          }
+        }
+      ],
+      "expected": {
+        "taskId": "task_public",
+        "taskData": {
+          "created": 1,
+          "data": [
+            {
+              "url": "https://cdn.relay.example/a.png"
+            },
+            {
+              "b64_json": "iVBORw0KGgo="
+            }
+          ]
+        },
+        "immediate": {
+          "status": "SUCCESS",
+          "progress": "100%",
+          "url": "https://cdn.relay.example/a.png"
+        }
+      }
+    },
+    {
+      "name": "relay refuses video",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "wan3.0-video",
+            "input": {
+              "prompt": "a fox"
+            },
+            "parameters": {
+              "duration": 2,
+              "resolution": "480P",
+              "ratio": "16:9"
+            }
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "wan3.0-video",
+          "upstreamModel": "wan3.0-video",
+          "baseUrl": "https://relay.example.com",
+          "apiKey": "relay-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {
+            "upstreamType": "openai"
+          },
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expectedError": "video models are not available when the channel's upstream t"
+    },
+    {
+      "name": "relay refuses input images",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "wan2.7-image",
+            "input": {
+              "messages": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "image": "https://x/a.png"
+                    },
+                    {
+                      "text": "x"
+                    }
+                  ]
+                }
+              ]
+            },
+            "parameters": {}
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "model": "wan2.7-image",
+          "upstreamModel": "wan2.7-image",
+          "baseUrl": "https://relay.example.com",
+          "apiKey": "relay-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {
+            "upstreamType": "openai"
+          },
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expectedError": "an OpenAI-compatible relay upstream takes text-to-image requ"
+    },
+    {
+      "name": "relay speech request",
+      "hook": "convertRequest",
+      "args": [
+        {
+          "baseUrl": "https://relay.example.com",
+          "path": "/v1/audio/speech",
+          "config": {
+            "upstreamType": "openai"
+          }
+        },
+        {
+          "model": "qwen-audio-3.0-tts-plus",
+          "stream": false,
+          "body": {
+            "model": "my-tts",
+            "input": "你好",
+            "voice": "alloy"
+          }
+        }
+      ],
+      "expected": {
+        "path": "/v1/audio/speech",
+        "method": "POST",
+        "body": {
+          "model": "qwen-audio-3.0-tts-plus",
+          "input": "你好",
+          "voice": "alloy"
+        },
+        "stream": false,
+        "nativeResponse": true,
+        "state": {
+          "kind": "speech",
+          "relay": true
+        }
+      }
+    },
+    {
+      "name": "relay speech error",
+      "hook": "convertResponse",
+      "args": [
+        {
+          "state": {
+            "kind": "speech",
+            "relay": true
+          },
+          "baseUrl": "https://relay.example.com",
+          "path": "/v1/audio/speech",
+          "config": {
+            "upstreamType": "openai"
+          }
+        },
+        {
+          "status": 429,
+          "headers": {},
+          "body": "{\"error\":{\"message\":\"slow down\",\"code\":\"rate_limit\"}}"
+        }
+      ],
+      "expected": {
+        "error": {
+          "status": 429,
+          "message": "slow down",
+          "type": "upstream_error",
+          "code": "rate_limit"
+        }
+      }
+    },
+    {
+      "name": "relay transcription request",
+      "hook": "convertRequest",
+      "args": [
+        {
+          "baseUrl": "https://relay.example.com",
+          "path": "/v1/audio/transcriptions",
+          "config": {
+            "upstreamType": "openai"
+          }
+        },
+        {
+          "model": "qwen-audio-3.0-asr-flash",
+          "stream": false,
+          "form": {
+            "fields": {
+              "model": [
+                "x"
+              ],
+              "response_format": [
+                "verbose_json"
+              ]
+            },
+            "files": [
+              {
+                "field": "file",
+                "filename": "a.mp3",
+                "contentType": "audio/mpeg",
+                "size": 9
+              }
+            ]
+          }
+        }
+      ],
+      "expected": {
+        "path": "/v1/audio/transcriptions",
+        "method": "POST",
+        "form": {
+          "fields": {
+            "model": "qwen-audio-3.0-asr-flash",
+            "response_format": [
+              "verbose_json"
+            ]
+          },
+          "files": [
+            {
+              "field": "file",
+              "from": "file"
+            }
+          ]
+        },
+        "stream": false,
+        "state": {
+          "kind": "transcription",
+          "relay": true,
+          "responseFormat": "verbose_json"
+        }
+      }
+    },
+    {
+      "name": "relay transcription bills seconds",
+      "hook": "convertResponse",
+      "args": [
+        {
+          "state": {
+            "kind": "transcription",
+            "relay": true,
+            "responseFormat": "verbose_json"
+          },
+          "baseUrl": "https://relay.example.com",
+          "path": "/v1/audio/transcriptions",
+          "config": {
+            "upstreamType": "openai"
+          }
+        },
+        {
+          "status": 200,
+          "headers": {},
+          "body": "{\"text\":\"你好\",\"duration\":2.2}"
+        }
+      ],
+      "expected": {
+        "body": {
+          "text": "你好",
+          "duration": 2.2,
+          "usage": {
+            "type": "tokens",
+            "input_tokens": 3,
+            "output_tokens": 0,
+            "total_tokens": 3,
+            "prompt_tokens": 3,
+            "completion_tokens": 0,
+            "seconds": 3
+          }
+        }
+      }
+    },
+    {
+      "name": "relay model list chains to /v1/models",
+      "hook": "convertResponse",
+      "args": [
+        {
+          "state": null,
+          "baseUrl": "https://relay.example.com",
+          "path": "/v1/models",
+          "config": {
+            "upstreamType": "openai"
+          }
+        },
+        {
+          "status": 404,
+          "headers": {},
+          "body": ""
+        }
+      ],
+      "expected": {
+        "next": {
+          "method": "GET",
+          "path": "/v1/models"
+        },
+        "state": {
+          "kind": "models",
+          "relay": true,
+          "ids": [],
+          "pages": 0
+        }
+      }
+    },
+    {
+      "name": "relay model list as the relay returns it",
+      "hook": "convertResponse",
+      "args": [
+        {
+          "state": {
+            "kind": "models",
+            "relay": true,
+            "ids": [],
+            "pages": 0
+          },
+          "baseUrl": "https://relay.example.com",
+          "path": "/v1/models",
+          "config": {
+            "upstreamType": "openai"
+          }
+        },
+        {
+          "status": 200,
+          "headers": {},
+          "body": "{\"data\":[{\"id\":\"gpt-5.5\"},{\"id\":\"wan3.0-video\"}]}"
+        }
+      ],
+      "expected": {
+        "body": {
+          "object": "list",
+          "data": [
+            {
+              "id": "gpt-5.5",
+              "object": "model",
+              "owned_by": "openai-compatible"
+            },
+            {
+              "id": "wan3.0-video",
+              "object": "model",
+              "owned_by": "openai-compatible"
+            }
+          ]
+        },
+        "contentType": "application/json"
+      }
+    },
+    {
+      "name": "relay key check refuses a bare Bailian host",
+      "hook": "checkKey",
+      "args": [
+        {
+          "baseUrl": "https://dashscope.aliyuncs.com",
+          "config": {
+            "upstreamType": "openai"
+          }
+        },
+        "relay-key"
+      ],
+      "expected": {
+        "error": {
+          "en": "Upstream type is OpenAI-compatible relay: set the channel Base URL to the relay's address, not dashscope.aliyuncs.com, or set Upstream type to Bailian API.",
+          "zh": "上游类型为 OpenAI 兼容中转：请把渠道 Base URL 填为中转地址，而不是 dashscope.aliyuncs.com，或把上游类型设为百炼官方 API。"
+        }
+      }
+    },
+    {
+      "name": "relay key check accepts the relay",
+      "hook": "checkKey",
+      "args": [
+        {
+          "baseUrl": "https://relay.example.com",
+          "config": {
+            "upstreamType": "openai"
+          }
+        },
+        "relay-key"
+      ],
+      "expected": null
     },
     {
       "name": "z-image request sends prompt_extend and no n",

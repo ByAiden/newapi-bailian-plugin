@@ -19,12 +19,17 @@
 // the input characters for speech); images and video are billed by task usage
 // facts (image_count, seconds, resolution and the few price switches such as
 // Wan 2.6 i2v flash audio) with expressions from README.
+//
+// Upstream type (channel setting): "bailian" (default) calls the DashScope
+// paths above; "openai" sends text, embeddings, speech, transcription and
+// image generation to an OpenAI-compatible relay at the channel Base URL
+// (/v1/... paths, Bearer key) and refuses video and the DashScope-native routes.
 
 export const meta = {
   "apiVersion": 1,
   "key": "byaiden_bailian",
   "name": { "en": "Alibaba Cloud Bailian", "zh": "阿里云百炼" },
-  "version": "1.3.0",
+  "version": "1.4.0",
   "author": { "name": "ByAiden", "url": "https://github.com/ByAiden" },
   "description": { "en": "Alibaba Cloud Bailian text, image, video and speech models on one channel", "zh": "一个渠道接入阿里云百炼文本、图片、视频与语音模型" },
   "icon": "Bailian.Color",
@@ -370,12 +375,26 @@ export const meta = {
   "channelConfig": {
     "type": "object",
     "properties": {
+      "upstreamType": {
+        "type": "string",
+        "title": { "en": "Upstream type", "zh": "上游类型" },
+        "description": {
+          "en": "Bailian API: the Base URL is a DashScope address (blank = https://dashscope.aliyuncs.com). OpenAI-compatible relay: the Base URL is the root of a relay that speaks OpenAI's API; text, embeddings, speech, transcription and image generation go there, video is not available.",
+          "zh": "百炼 API：Base URL 为 DashScope 地址（留空即 https://dashscope.aliyuncs.com）。OpenAI 兼容中转：Base URL 填兼容 OpenAI 接口的中转根地址，文本、向量、语音合成、语音识别和图片生成都发往该地址，不提供视频。"
+        },
+        "enum": ["bailian", "openai"],
+        "enumTitles": [
+          { "en": "Bailian API", "zh": "百炼官方 API" },
+          { "en": "OpenAI-compatible relay", "zh": "OpenAI 兼容中转" }
+        ],
+        "default": "bailian"
+      },
       "defaultVoice": {
         "type": "string",
         "title": { "en": "Default voice", "zh": "默认音色" },
         "description": {
-          "en": "Bailian voice used when a speech request names an OpenAI voice such as alloy, or none",
-          "zh": "语音合成请求使用 alloy 等 OpenAI 音色名或未指定音色时使用的百炼音色"
+          "en": "Bailian voice used when a speech request names an OpenAI voice such as alloy, or none (Bailian API only)",
+          "zh": "语音合成请求使用 alloy 等 OpenAI 音色名或未指定音色时使用的百炼音色（仅百炼 API）"
         },
         "default": "longanhuan_v3.6",
         "minLength": 1,
@@ -385,8 +404,8 @@ export const meta = {
     }
   },
   "keyHint": {
-    "en": "Bailian API key (sk-...) of the site the Base URL points to",
-    "zh": "百炼 API Key（sk-），与 Base URL 所在站点对应"
+    "en": "Bailian API key (sk-...) of the site the Base URL points to, or the relay's key when Upstream type is OpenAI-compatible relay",
+    "zh": "百炼 API Key（sk-），与 Base URL 所在站点对应；上游类型为 OpenAI 兼容中转时填中转的 Key"
   }
 };
 
@@ -606,6 +625,22 @@ function apiUrl(ctx, path) {
   return String(ctx.baseUrl || "").replace(/\/+$/, "") + (viaGateway(ctx) ? "/" + PLUGIN_KEY : "") + path;
 }
 
+// The channel setting: Bailian's own API, or an OpenAI-compatible relay.
+export function upstreamType(ctx) {
+  const config = isObject(ctx && ctx.config) ? ctx.config : {};
+  return config.upstreamType === "openai" ? "openai" : "bailian";
+}
+
+// A type-60 New API channel always talks to the middle gateway's Bailian
+// routes; the upstream type is a setting of type-61 channels.
+function viaRelay(ctx) {
+  return !viaGateway(ctx) && upstreamType(ctx) === "openai";
+}
+
+const RELAY_NO_VIDEO = "video models are not available when the channel's upstream type is OpenAI-compatible relay";
+const RELAY_NO_NATIVE = "the DashScope endpoints are not available when the channel's upstream type is OpenAI-compatible relay; use /v1/images/generations";
+const RELAY_NO_EDIT = "an OpenAI-compatible relay upstream takes text-to-image requests on /v1/images/generations only; input images are not supported";
+
 function vendorError(body) {
   if (!isObject(body)) return "";
   if (body.code) return String(body.code) + ": " + String(body.message || "");
@@ -787,6 +822,14 @@ export function imageOutputs(body) {
   for (const result of Array.isArray(output.results) ? output.results : []) {
     if (result && typeof result.url === "string" && result.url) images.push(result.url);
   }
+  // An OpenAI-compatible relay answers with OpenAI's data list.
+  if (!isObject(body && body.output) && isObject(body) && Array.isArray(body.data)) {
+    for (const item of body.data) {
+      if (!isObject(item)) continue;
+      if (typeof item.url === "string" && item.url.trim()) images.push(item.url.trim());
+      else if (typeof item.b64_json === "string" && item.b64_json) images.push("data:image/png;base64," + item.b64_json);
+    }
+  }
   return images;
 }
 
@@ -820,8 +863,28 @@ function imageDatum(image) {
 
 // An image task Bailian runs asynchronously (submit returns a task id).
 function asyncImage(ctx) {
+  if (viaRelay(ctx)) return false;
   const profile = imageProfile(ctx);
   return !!profile && imageService(profile, (ctx && ctx.requestBody) || {}).asynchronous;
+}
+
+// OpenAI image generation for a relay: the request is validated as for
+// Bailian, and the values that drive the price (n, Z-Image prompt_extend)
+// are sent explicitly so the relay renders what was reserved.
+export function buildRelayImageBody(ctx) {
+  const req = (ctx && ctx.requestBody) || {};
+  if (req.native === true) fail(RELAY_NO_NATIVE);
+  const built = buildImageBody(ctx);
+  if (built.inputImages) fail(RELAY_NO_EDIT);
+  const content = built.body.input.messages ? built.body.input.messages[0].content : [];
+  let prompt = typeof built.body.input.prompt === "string" ? built.body.input.prompt : "";
+  for (const part of content) if (typeof part.text === "string") prompt = part.text;
+  const body = { model: modelOf(ctx), prompt: prompt };
+  const parameters = built.body.parameters;
+  for (const key of Object.keys(parameters)) body[key] = clone(parameters[key]);
+  if (built.body.input.negative_prompt !== undefined) body.negative_prompt = built.body.input.negative_prompt;
+  if (typeof body.size === "string") body.size = body.size.replace("*", "x");
+  return { body: body, built: built };
 }
 
 // ---------------------------------------------------------------------------
@@ -1056,6 +1119,17 @@ export function videoUrl(body) {
 // Driver hooks (task part)
 
 export function buildSubmitRequest(ctx) {
+  if (viaRelay(ctx)) {
+    if (!imageProfile(ctx)) fail(videoProfile(ctx) ? RELAY_NO_VIDEO : "unsupported model: " + modelOf(ctx));
+    const relay = buildRelayImageBody(ctx);
+    return {
+      url: String(ctx.baseUrl || "").replace(/\/+$/, "") + "/v1/images/generations",
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + ctx.apiKey },
+      body: relay.body,
+      action: "text_to_image",
+    };
+  }
   if (imageProfile(ctx)) {
     const built = buildImageBody(ctx);
     return {
@@ -1078,6 +1152,19 @@ export function buildSubmitRequest(ctx) {
 
 export function parseSubmitResponse(ctx, resp) {
   const body = (resp && resp.body) || {};
+  if (viaRelay(ctx)) {
+    if (!isObject(body)) fail("the relay returned an unreadable image reply");
+    if (isObject(body.error)) fail(String(body.error.message || body.error.code || "the relay returned an error"));
+    const images = imageOutputs(body);
+    if (!images.length) fail("the relay's image reply has no images");
+    if (images.length > MAX_IMAGE_OUTPUTS) fail("too many output images");
+    const taskId = ctx.publicTaskId;
+    if (!taskId) fail("missing gateway task id");
+    const immediate = { status: "SUCCESS", progress: "100%" };
+    const link = images.find(function (image) { return /^https?:\/\//i.test(image); });
+    if (link) immediate.url = link;
+    return { taskId: taskId, taskData: body, immediate: immediate };
+  }
   const error = vendorError(body);
   if (error) fail(error);
   const output = isObject(body.output) ? body.output : {};
@@ -1093,6 +1180,12 @@ export function parseSubmitResponse(ctx, resp) {
 }
 
 export function extractUsage(ctx) {
+  if (viaRelay(ctx)) {
+    if (!imageProfile(ctx)) fail(videoProfile(ctx) ? RELAY_NO_VIDEO : "unsupported model: " + modelOf(ctx));
+    const facts = imageEstimate(ctx, buildRelayImageBody(ctx).built);
+    if (ctx.usagePurpose === "billing_ratios") return { image_count: facts.image_count };
+    return facts;
+  }
   if (imageProfile(ctx)) {
     const facts = imageEstimate(ctx, buildImageBody(ctx));
     if (ctx.usagePurpose === "billing_ratios") return { image_count: facts.image_count };
@@ -1226,7 +1319,7 @@ function jsonBody(ctx) {
 function nativeImage(ctx, mode) {
   const req = jsonBody(ctx);
   for (const key of Object.keys(req)) if (!["model", "input", "parameters"].includes(key)) fail("unsupported field: " + key);
-  const requestBody = { model: req.model, input: clone(objectValue(req.input, "input")), parameters: clone(objectValue(req.parameters, "parameters")) };
+  const requestBody = { model: req.model, input: clone(objectValue(req.input, "input")), parameters: clone(objectValue(req.parameters, "parameters")), native: true };
   if (mode) requestBody.mode = mode;
   const content = isObject(requestBody.input) && Array.isArray(requestBody.input.messages) && requestBody.input.messages[0] && requestBody.input.messages[0].content;
   const hasImage = Array.isArray(content) && content.some(function (part) { return isObject(part) && part.image !== undefined; });
@@ -1267,7 +1360,7 @@ export const native = {
       kind: "submit",
       model: req.model,
       action: content.length > 1 ? "image_to_image" : "text_to_image",
-      requestBody: { model: req.model, input: { messages: [{ role: "user", content: content }] }, parameters: parameters },
+      requestBody: { model: req.model, input: { messages: [{ role: "user", content: content }] }, parameters: parameters, native: true },
     };
   },
   // The synchronous reply, with the gateway id as request_id.
@@ -1455,7 +1548,16 @@ export const protocols = {
 
 // ---------------------------------------------------------------------------
 // Provider part: speech and transcription converters. Text routes use the
-// host's `none` converter and never reach these hooks.
+// host's `none` converter and never reach these hooks; on a relay upstream
+// prepareRequest sends them to the relay's OpenAI paths.
+
+const RELAY_TEXT_PATHS = ["/v1/chat/completions", "/v1/responses", "/v1/messages", "/v1/embeddings"];
+
+export function prepareRequest(ctx, request) {
+  const path = (request && request.path) || (ctx && ctx.path);
+  if (upstreamType(ctx) !== "openai" || RELAY_TEXT_PATHS.indexOf(path) < 0) return null;
+  return { path: path };
+}
 
 const OPENAI_VOICES = ["alloy", "ash", "ballad", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer", "verse", "marin", "cedar"];
 const SPEECH_FORMATS = { mp3: "audio/mpeg", wav: "audio/wav", pcm: "audio/pcm", opus: "audio/ogg" };
@@ -1550,9 +1652,79 @@ export function buildTranscriptionRequest(form, model) {
   };
 }
 
+// A relay's OpenAI speech and transcription: the request goes as it came with
+// the upstream model, and a 2xx speech reply reaches the gateway's own speech
+// handler unchanged.
+function relayConvertRequest(ctx, request, model) {
+  if (ctx.path === SPEECH_PATH) {
+    if (!isObject(request.body)) fail("A JSON body is required.");
+    const body = Object.assign({}, request.body, { model: model });
+    const stream = request.stream === true;
+    return { path: SPEECH_PATH, method: "POST", body: body, stream: stream, nativeResponse: true, state: { kind: "speech", relay: true } };
+  }
+  if (ctx.path === TRANSCRIPTION_PATH) {
+    const form = request.form;
+    if (!form || !isObject(form.fields) || !Array.isArray(form.files)) fail("A multipart form with a file is required.");
+    const fields = Object.assign({}, form.fields, { model: model });
+    const format = Array.isArray(fields.response_format) ? fields.response_format[0] : fields.response_format;
+    return {
+      path: TRANSCRIPTION_PATH,
+      method: "POST",
+      form: {
+        fields: fields,
+        files: form.files.map(function (file) { return { field: String(file.field).replace(/#\d+$/, ""), from: file.field }; }),
+      },
+      stream: false,
+      state: { kind: "transcription", relay: true, responseFormat: trimmed(format) || "json" },
+    };
+  }
+  fail("This plugin does not convert " + ctx.path);
+}
+
+// The relay's transcription, billed by the audio seconds it reports
+// (usage.seconds of a duration usage, or verbose_json duration) as on Bailian;
+// other replies pass on as they came.
+export function relayTranscriptionReply(parsed, text, response) {
+  const usage = isObject(parsed) && isObject(parsed.usage) ? parsed.usage : null;
+  const raw = usage && usage.type === "duration" ? usage.seconds : isObject(parsed) ? parsed.duration : undefined;
+  if (!isObject(parsed) || !(typeof raw === "number" && Number.isFinite(raw) && raw > 0)) {
+    const type = headerValue(response && response.headers, "Content-Type");
+    return type ? { body: text, contentType: type } : { body: text };
+  }
+  const seconds = Math.ceil(raw);
+  const reply = Object.assign({}, parsed);
+  reply.usage = { type: "tokens", input_tokens: seconds, output_tokens: 0, total_tokens: seconds, prompt_tokens: seconds, completion_tokens: 0, seconds: seconds };
+  return { body: reply };
+}
+
+// A relay's OpenAI model list, kept as it came (the relay decides what it
+// serves); the first request goes to the route's Bailian path, so it is
+// chained to /v1/models.
+function relayModelList(response, state) {
+  if (!isObject(state) || state.kind !== "models" || state.relay !== true) {
+    return { next: { method: "GET", path: MODELS_PATH }, state: { kind: "models", relay: true, ids: [], pages: 0 } };
+  }
+  const status = response.status;
+  if (status < 200 || status >= 300) return convertError(status >= 400 && status <= 599 ? status : 502, "The relay's model list request failed with status " + status);
+  const parsed = typeof response.body === "string" ? parseJSON(response.body) : null;
+  if (!isObject(parsed) || !Array.isArray(parsed.data)) return convertError(502, "the relay returned an unreadable model list");
+  const ids = Array.isArray(state.ids) ? state.ids.slice() : [];
+  const pages = (Number.isInteger(state.pages) ? state.pages : 0) + 1;
+  for (const item of parsed.data) {
+    const id = isObject(item) && typeof item.id === "string" ? item.id.trim() : "";
+    if (id && ids.indexOf(id) < 0) ids.push(id);
+  }
+  const last = typeof parsed.last_id === "string" ? parsed.last_id : "";
+  if (parsed.has_more === true && last && pages < MODEL_LIST_MAX_PAGES) {
+    return { next: { method: "GET", path: MODELS_PATH + "?after=" + encodeURIComponent(last) }, state: { kind: "models", relay: true, ids: ids, pages: pages } };
+  }
+  return { body: { object: "list", data: ids.map(function (id) { return { id: id, object: "model", owned_by: "openai-compatible" }; }) }, contentType: "application/json" };
+}
+
 export function convertRequest(ctx, request) {
   const model = trimmed(request && request.model) || trimmed(request && request.body && request.body.model);
   if (!model) fail("model is required");
+  if (upstreamType(ctx) === "openai") return relayConvertRequest(ctx, request, model);
   if (ctx.path === SPEECH_PATH) {
     const built = buildSpeechRequest(request.body, model, ctx.config);
     return {
@@ -1598,6 +1770,18 @@ export function transcriptionReply(parsed, state) {
 export function convertResponse(ctx, response) {
   const state = ctx.state || {};
   const status = response.status;
+  if (upstreamType(ctx) === "openai" && (state.kind === "models" || (ctx.path === MODELS_PATH && !state.kind))) return relayModelList(response, state);
+  if (state.relay === true) {
+    const relayText = response.body !== undefined ? response.body : "";
+    const relayParsed = typeof relayText === "string" ? parseJSON(relayText) : null;
+    if (status < 200 || status >= 300) {
+      const error = relayParsed && isObject(relayParsed.error) ? relayParsed.error : relayParsed || {};
+      const message = error.message ? String(error.message) : String(relayText).slice(0, 512) || "upstream error " + status;
+      return convertError(status >= 400 && status <= 599 ? status : 502, message, error.code ? String(error.code) : undefined);
+    }
+    if (state.kind === "transcription") return relayTranscriptionReply(relayParsed, relayText, response);
+    return convertError(502, "the relay answered speech without audio");
+  }
   if (state.kind === "models" || (ctx.path === MODELS_PATH && !state.kind)) {
     if (status < 200 || status >= 300) return convertError(status >= 400 && status <= 599 ? status : 502, "Bailian model list request failed with status " + status);
     return modelListReply(response, state, ctx.baseUrl);
@@ -1651,12 +1835,22 @@ export function convertStreamEvent(ctx, input) {
   return result;
 }
 
-// Keys starting with sk-sp- are not Bailian API keys and fail on the DashScope hosts.
+// A relay upstream needs the relay's own address: a bare Bailian host has
+// no /v1 paths.
 export function checkKey(ctx, key) {
   const value = String(key || "").trim();
   if (!value) return { error: { en: "The key is empty.", zh: "Key 为空。" } };
-  const host = String((ctx && ctx.baseUrl) || "").replace(/^https?:\/\//i, "").split(/[/:]/)[0].toLowerCase();
-  if (/^sk-sp-/.test(value) && /^dashscope(-intl)?\.aliyuncs\.com$/.test(host))
-    return { error: { en: "This is not a Bailian API key, so it does not work on " + host + ". Use a Bailian API key (sk-...).", zh: "这不是百炼 API Key，不能用于 " + host + "，请填写百炼 API Key（sk-）。" } };
+  if (upstreamType(ctx) !== "openai") return undefined;
+  const raw = String((ctx && ctx.baseUrl) || "").trim();
+  const rest = raw.replace(/^https?:\/\//i, "");
+  const host = rest.split(/[/:?#]/)[0].toLowerCase();
+  const path = rest.slice(rest.split(/[/?#]/)[0].length).replace(/[?#].*$/, "").replace(/\/+$/, "");
+  if (!raw || (/(^|\.)aliyuncs\.com$/.test(host) && !path))
+    return {
+      error: {
+        en: "Upstream type is OpenAI-compatible relay: set the channel Base URL to the relay's address" + (host ? ", not " + host : "") + ", or set Upstream type to Bailian API.",
+        zh: "上游类型为 OpenAI 兼容中转：请把渠道 Base URL 填为中转地址" + (host ? "，而不是 " + host : "") + "，或把上游类型设为百炼官方 API。",
+      },
+    };
   return undefined;
 }

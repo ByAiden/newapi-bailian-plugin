@@ -8,7 +8,7 @@ const {
   meta, PLUGIN_KEY, MODEL_IDS, TEXT_MODELS, EMBEDDING_MODELS, IMAGE_MODELS, VIDEO_MODELS, TTS_MODELS, ASR_MODELS,
   buildSubmitRequest, parseSubmitResponse, extractUsage, extractUsageOnSubmit, extractUsageOnComplete, buildQueryRequest,
   parseTaskResult, listArtifacts, buildContentRequest, native, protocols, convertRequest, convertResponse, convertStreamEvent,
-  checkKey, videoSize, modelListReply, servedModel,
+  checkKey, videoSize, modelListReply, servedModel, prepareRequest, upstreamType, relayTranscriptionReply,
 } = plugin;
 
 function header(headers, name) {
@@ -769,13 +769,12 @@ test("other relay paths are not converted", () => {
 
 // --- channel key ------------------------------------------------------------
 
-test("checkKey refuses an sk-sp- key on the DashScope hosts", () => {
+test("checkKey accepts any non-empty key on the Bailian API and refuses an empty one", () => {
   assert.equal(checkKey({ baseUrl: BASE, config: {} }, "sk-abc"), undefined);
   assert.equal(checkKey({ baseUrl: "https://dashscope-intl.aliyuncs.com", config: {} }, "sk-abc"), undefined);
-  assert.match(checkKey({ baseUrl: "https://dashscope-intl.aliyuncs.com", config: {} }, "sk-sp-abc").error.en, /Bailian API key/);
-  assert.ok(checkKey({ baseUrl: BASE, config: {} }, "sk-sp-abc").error);
+  assert.equal(checkKey({ baseUrl: "https://ws1.cn-beijing.maas.aliyuncs.com", config: {} }, "sk-other-abc"), undefined);
+  assert.equal(checkKey({ baseUrl: "", config: { upstreamType: "bailian" } }, "sk-abc"), undefined);
   assert.ok(checkKey({ baseUrl: BASE, config: {} }, " ").error);
-  assert.equal(checkKey({ baseUrl: "https://other.example.com", config: {} }, "sk-sp-abc"), undefined);
 });
 
 test("model fetch keeps served and chat models and drops ones without a route", () => {
@@ -898,4 +897,184 @@ test("new_api: video query, status and download through the middle gateway", () 
   delete globalThis.utils;
   assert.deepEqual(content, { url: GW + "/v1/tasks/task_middle/artifacts/video/content", method: "GET", headers: { Authorization: "Bearer sk-gateway" } });
   assert.equal(calls.length, 0);
+});
+
+// --- upstream type: OpenAI-compatible relay ------------------------------------
+
+const RELAY = "https://relay.example.com";
+const relayCfg = { upstreamType: "openai" };
+const relayDriver = (requestBody, extra) => driver(requestBody, Object.assign({ baseUrl: RELAY + "/", apiKey: "relay-key", config: relayCfg }, extra || {}));
+const relayCtx = (path, extra) => deepFreeze(Object.assign({ baseUrl: RELAY, path: path, config: relayCfg }, extra || {}));
+
+test("the upstream type setting defaults to the Bailian API", () => {
+  const field = meta.channelConfig.properties.upstreamType;
+  assert.deepEqual(field.enum, ["bailian", "openai"]);
+  assert.equal(field.default, "bailian");
+  assert.equal(field.enumTitles.length, 2);
+  assert.ok(meta.channelConfig.properties.defaultVoice, "the voice setting stays");
+  assert.equal(upstreamType({ config: {} }), "bailian");
+  assert.equal(upstreamType({}), "bailian");
+  assert.equal(upstreamType({ config: { upstreamType: "bailian" } }), "bailian");
+  assert.equal(upstreamType({ config: relayCfg }), "openai");
+  assert.equal(upstreamType({ config: { upstreamType: "xai" } }), "bailian");
+});
+
+test("prepareRequest leaves Bailian requests alone and sends relay text to its OpenAI paths", () => {
+  for (const path of ["/v1/chat/completions", "/v1/responses", "/v1/messages", "/v1/embeddings", "/v1/audio/speech"]) {
+    const request = deepFreeze({ path, upstreamPath: "/compatible-mode" + path, model: "qwen-plus", stream: false, body: { model: "qwen-plus" }, headers: {} });
+    assert.equal(prepareRequest(deepFreeze({ baseUrl: BASE, path, config: {} }), request), null, path);
+    assert.equal(prepareRequest(deepFreeze({ baseUrl: BASE, path, config: { upstreamType: "bailian" } }), request), null, path);
+  }
+  for (const path of ["/v1/chat/completions", "/v1/responses", "/v1/messages", "/v1/embeddings"]) {
+    const request = deepFreeze({ path, upstreamPath: "/compatible-mode" + path, model: "qwen-plus", stream: true, body: { model: "qwen-plus", stream: true }, headers: {} });
+    assert.deepEqual(prepareRequest(relayCtx(path), request), { path }, path);
+  }
+  // Speech and transcription choose their path in convertRequest.
+  for (const path of ["/v1/audio/speech", "/v1/audio/transcriptions", "/v1/models"]) {
+    assert.equal(prepareRequest(relayCtx(path), deepFreeze({ path, upstreamPath: "/x", model: "m", stream: false, body: {}, headers: {} })), null, path);
+  }
+});
+
+test("relay images: OpenAI generations at the relay with the upstream model, priced as on Bailian", () => {
+  const intent = imageDecode({ model: "wan2.7-image", prompt: "a cat", size: "1024*1024", n: 2, watermark: false, response_format: "b64_json" });
+  const ctx = relayDriver(intent.requestBody);
+  const req = buildSubmitRequest(ctx);
+  assert.equal(req.url, RELAY + "/v1/images/generations");
+  assert.equal(req.method, "POST");
+  assert.equal(req.headers.Authorization, "Bearer relay-key");
+  assert.equal(header(req.headers, "x-dashscope-async"), undefined);
+  assert.deepEqual(req.body, { model: "wan2.7-image", prompt: "a cat", n: 2, size: "1024x1024", watermark: false });
+  assert.deepEqual(extractUsage(ctx), { image_count: 2 });
+  assert.deepEqual(extractUsage(Object.assign({}, ctx, { usagePurpose: "billing_ratios" })), { image_count: 2 });
+  // A mapped alias sends the upstream model name, unchanged.
+  const alias = relayDriver(Object.assign({}, intent.requestBody, { model: "my-image" }), { model: "my-image", upstreamModel: "wan2.7-image" });
+  assert.equal(buildSubmitRequest(alias).body.model, "wan2.7-image");
+  // Price-determining defaults go explicitly.
+  const z = relayDriver(imageDecode({ model: "z-image-turbo", prompt: "x", size: "1024x1536" }).requestBody);
+  assert.deepEqual(buildSubmitRequest(z).body, { model: "z-image-turbo", prompt: "x", size: "1024x1536", prompt_extend: false });
+  assert.deepEqual(extractUsage(z), { image_count: 1, prompt_extend: false });
+  const q3 = relayDriver(imageDecode({ model: "qwen-image-3.0-pro", prompt: "x", size: "2048*2048" }).requestBody);
+  assert.deepEqual(extractUsage(q3), { image_count: 1, output_image_type: "qima_output_2k", input_image_count: 0 });
+  const w25 = relayDriver(imageDecode({ model: "wan2.5-t2i-preview", prompt: "x", negative_prompt: "dogs", size: "1280*1280" }).requestBody);
+  const w25req = buildSubmitRequest(w25);
+  assert.equal(w25req.url, RELAY + "/v1/images/generations", "no async Bailian task on a relay");
+  assert.deepEqual(w25req.body, { model: "wan2.5-t2i-preview", prompt: "x", size: "1280x1280", n: 1, negative_prompt: "dogs" });
+});
+
+test("relay images: validation still applies, and edits, native routes and video are refused", () => {
+  assert.throws(() => buildSubmitRequest(relayDriver(imageDecode({ model: "wan2.7-image", prompt: "x", n: 9 }).requestBody)), /n must be/);
+  const edit = imageDecode({ model: "wan2.7-image", prompt: "x", image: "https://x/a.png" }, "edit");
+  assert.throws(() => buildSubmitRequest(relayDriver(edit.requestBody)), /input images are not supported/);
+  assert.throws(() => extractUsage(relayDriver(edit.requestBody)), /input images are not supported/);
+  const body = { model: "wan2.7-image", input: { messages: [{ role: "user", content: [{ text: "a cat" }] }] }, parameters: {} };
+  const nativeIntent = native.createImage(deepFreeze({ body: { kind: "json", value: body }, requestHeaders: {} }));
+  assert.throws(() => extractUsage(relayDriver(nativeIntent.requestBody)), /DashScope endpoints are not available/);
+  assert.throws(() => buildSubmitRequest(relayDriver(nativeIntent.requestBody)), /DashScope endpoints are not available/);
+  const legacy = native.createLegacyImage(deepFreeze({ body: { kind: "json", value: { model: "wan2.5-t2i-preview", input: { prompt: "x" } } }, requestHeaders: {} }));
+  assert.throws(() => buildSubmitRequest(relayDriver(legacy.requestBody)), /DashScope endpoints are not available/);
+  // The native marker changes nothing on the Bailian API.
+  assert.equal(buildSubmitRequest(driver(nativeIntent.requestBody)).body.native, undefined);
+  const video = videoDecode({ model: "wan3.0-video", prompt: "a fox", seconds: "2", size: "832x480" });
+  assert.throws(() => extractUsage(relayDriver(video.requestBody)), /video models are not available/);
+  assert.throws(() => buildSubmitRequest(relayDriver(video.requestBody)), /video models are not available/);
+  const nativeVideo = native.createVideo(deepFreeze({ body: { kind: "json", value: { model: "happyhorse-1.1-t2v", input: { prompt: "x" }, parameters: {} } }, requestHeaders: {} }));
+  assert.throws(() => buildSubmitRequest(relayDriver(nativeVideo.requestBody)), /video models are not available/);
+});
+
+test("relay images: the OpenAI reply completes immediately and settles on the delivered images", () => {
+  const ctx = relayDriver(imageDecode({ model: "wan2.7-image", prompt: "x", n: 2 }).requestBody);
+  const urls = deepFreeze({ created: 1, data: [{ url: "https://cdn.relay.example/a.png" }, { url: "https://cdn.relay.example/b.png" }], usage: { input_tokens: 5, output_tokens: 10 } });
+  const parsed = parseSubmitResponse(ctx, { statusCode: 200, headers: {}, body: urls });
+  assert.deepEqual(parsed.immediate, { status: "SUCCESS", progress: "100%", url: "https://cdn.relay.example/a.png" });
+  assert.equal(parsed.taskId, "task_public");
+  assert.deepEqual(extractUsageOnSubmit(ctx, urls), { image_count: 2 });
+  assert.deepEqual(extractUsageOnComplete({ model: "wan2.7-image", upstreamModel: "wan2.7-image", config: relayCfg }, { status: "SUCCESS" }, urls), { image_count: 2 });
+  assert.deepEqual(protocols.openai_image.render({}, { created_at: 7, data: urls }), { created: 7, data: [{ url: "https://cdn.relay.example/a.png" }, { url: "https://cdn.relay.example/b.png" }] });
+  const b64 = deepFreeze({ created: 1, data: [{ b64_json: "iVBORw0KGgo=" }] });
+  const parsedB64 = parseSubmitResponse(ctx, { statusCode: 200, headers: {}, body: b64 });
+  assert.deepEqual(parsedB64.immediate, { status: "SUCCESS", progress: "100%" }, "no data URL as the task link");
+  assert.deepEqual(protocols.openai_image.render({}, { created_at: 7, data: b64 }).data, [{ b64_json: "iVBORw0KGgo=" }]);
+  assert.deepEqual(extractUsageOnComplete({ model: "wan2.7-image" }, { status: "SUCCESS" }, b64), { image_count: 1 });
+  assert.throws(() => parseSubmitResponse(ctx, { statusCode: 200, body: { data: [] } }), /no images/);
+  assert.throws(() => parseSubmitResponse(ctx, { statusCode: 200, body: { error: { message: "quota exceeded" } } }), /quota exceeded/);
+});
+
+test("a New API channel ignores the upstream type", () => {
+  const intent = imageDecode({ model: "wan2.7-image", prompt: "x" });
+  const req = buildSubmitRequest(driver(intent.requestBody, viaGW({ config: relayCfg })));
+  assert.equal(req.url, GW + "/" + PLUGIN_KEY + "/api/v1/services/aigc/multimodal-generation/generation");
+  const video = videoDecode({ model: "wan3.0-video", prompt: "a fox", seconds: "2", size: "832x480" });
+  assert.equal(buildSubmitRequest(driver(video.requestBody, viaGW({ config: relayCfg }))).url, GW + "/" + PLUGIN_KEY + "/api/v1/services/aigc/video-generation/video-synthesis");
+});
+
+test("relay speech goes to the relay's OpenAI speech path and its reply to the gateway unchanged", () => {
+  const body = { model: "my-tts", input: "你好", voice: "alloy", response_format: "wav", speed: 1.2 };
+  const out = convertRequest(relayCtx("/v1/audio/speech"), deepFreeze({ model: "qwen-audio-3.0-tts-plus", stream: false, body }));
+  assert.deepEqual(out, { path: "/v1/audio/speech", method: "POST", body: Object.assign({}, body, { model: "qwen-audio-3.0-tts-plus" }), stream: false, nativeResponse: true, state: { kind: "speech", relay: true } });
+  const sse = convertRequest(relayCtx("/v1/audio/speech"), deepFreeze({ model: "qwen-audio-3.0-tts-plus", stream: true, body: Object.assign({ stream_format: "sse" }, body) }));
+  assert.equal(sse.stream, true);
+  assert.equal(sse.nativeResponse, true);
+  const failed = convertResponse(relayCtx("/v1/audio/speech", { state: out.state }), { status: 429, headers: {}, body: JSON.stringify({ error: { message: "slow down", code: "rate_limit" } }) });
+  assert.deepEqual(failed, { error: { status: 429, message: "slow down", type: "upstream_error", code: "rate_limit" } });
+  assert.equal(convertResponse(relayCtx("/v1/audio/speech", { state: out.state }), { status: 502, headers: {}, body: "bad gateway" }).error.message, "bad gateway");
+});
+
+test("relay transcription passes the form on and bills the seconds the relay reports", () => {
+  const form = { fields: { model: ["my-asr"], language: ["zh"], response_format: ["verbose_json"], prompt: ["names"] }, files: [{ field: "file", filename: "a.mp3", contentType: "audio/mpeg", size: 9 }] };
+  const out = convertRequest(relayCtx("/v1/audio/transcriptions"), deepFreeze({ model: "qwen-audio-3.0-asr-flash", stream: false, form }));
+  assert.deepEqual(out, {
+    path: "/v1/audio/transcriptions",
+    method: "POST",
+    form: { fields: { model: "qwen-audio-3.0-asr-flash", language: ["zh"], response_format: ["verbose_json"], prompt: ["names"] }, files: [{ field: "file", from: "file" }] },
+    stream: false,
+    state: { kind: "transcription", relay: true, responseFormat: "verbose_json" },
+  });
+  const verbose = convertResponse(relayCtx("/v1/audio/transcriptions", { state: out.state }), { status: 200, headers: {}, body: JSON.stringify({ text: "你好", duration: 2.2, language: "zh" }) });
+  assert.equal(verbose.body.text, "你好");
+  assert.deepEqual(verbose.body.usage, { type: "tokens", input_tokens: 3, output_tokens: 0, total_tokens: 3, prompt_tokens: 3, completion_tokens: 0, seconds: 3 });
+  const duration = relayTranscriptionReply({ text: "x", usage: { type: "duration", seconds: 4 } }, "", { headers: {} });
+  assert.equal(duration.body.usage.prompt_tokens, 4);
+  const tokens = JSON.stringify({ text: "x", usage: { type: "tokens", input_tokens: 10, output_tokens: 2, total_tokens: 12 } });
+  assert.deepEqual(convertResponse(relayCtx("/v1/audio/transcriptions", { state: out.state }), { status: 200, headers: { "Content-Type": "application/json" }, body: tokens }), { body: tokens, contentType: "application/json" });
+  assert.deepEqual(convertResponse(relayCtx("/v1/audio/transcriptions", { state: out.state }), { status: 200, headers: { "Content-Type": "text/plain" }, body: "hello" }), { body: "hello", contentType: "text/plain" });
+  assert.equal(convertResponse(relayCtx("/v1/audio/transcriptions", { state: out.state }), { status: 400, headers: {}, body: JSON.stringify({ error: { message: "bad file" } }) }).error.status, 400);
+  assert.throws(() => convertRequest(relayCtx("/v1/audio/transcriptions"), { model: "m", stream: false, body: {} }), /multipart form/);
+  assert.throws(() => convertRequest(relayCtx("/v1/chat/completions"), { model: "m", stream: false, body: {} }), /does not convert/);
+});
+
+test("relay model fetch returns the relay's own /v1/models list", () => {
+  // The route's first request goes to the Bailian list path; it is chained to /v1/models.
+  const first = convertResponse(relayCtx("/v1/models", { state: null }), { status: 404, headers: {}, body: "" });
+  assert.deepEqual(first, { next: { method: "GET", path: "/v1/models" }, state: { kind: "models", relay: true, ids: [], pages: 0 } });
+  const list = JSON.stringify({ object: "list", data: [{ id: "gpt-5.5" }, { id: "qwen3.8-max" }, { id: "wan3.0-video" }, { id: "gpt-5.5" }, { id: "tts-2" }] });
+  const out = convertResponse(relayCtx("/v1/models", { state: first.state }), { status: 200, headers: {}, body: list });
+  assert.deepEqual(out.body.data.map((m) => m.id), ["gpt-5.5", "qwen3.8-max", "wan3.0-video", "tts-2"], "kept as the relay lists it, no Bailian additions");
+  assert.equal(out.body.data[0].owned_by, "openai-compatible");
+  const paged = convertResponse(relayCtx("/v1/models", { state: first.state }), { status: 200, headers: {}, body: JSON.stringify({ data: [{ id: "a" }], has_more: true, last_id: "a" }) });
+  assert.equal(paged.next.path, "/v1/models?after=a");
+  const last = convertResponse(relayCtx("/v1/models", { state: paged.state }), { status: 200, headers: {}, body: JSON.stringify({ data: [{ id: "b" }] }) });
+  assert.deepEqual(last.body.data.map((m) => m.id), ["a", "b"]);
+  assert.equal(convertResponse(relayCtx("/v1/models", { state: first.state }), { status: 401, headers: {}, body: "{}" }).error.status, 401);
+  assert.match(convertResponse(relayCtx("/v1/models", { state: first.state }), { status: 200, headers: {}, body: "<html>" }).error.message, /unreadable/);
+});
+
+test("checkKey on a relay upstream asks for the relay's address", () => {
+  const relay = (baseUrl) => checkKey({ baseUrl, config: relayCfg }, "relay-key");
+  assert.equal(relay(RELAY), undefined);
+  assert.equal(relay("http://host.docker.internal:39301"), undefined);
+  assert.equal(relay("https://dashscope.aliyuncs.com/compatible-mode"), undefined, "Bailian's own OpenAI-compatible root works as a relay");
+  assert.match(relay(BASE).error.en, /relay's address, not dashscope\.aliyuncs\.com/);
+  assert.match(relay("https://dashscope-intl.aliyuncs.com/").error.zh, /中转地址/);
+  assert.ok(relay("https://ws1.cn-beijing.maas.aliyuncs.com").error);
+  assert.ok(relay("").error, "a blank Base URL means the Bailian host");
+  assert.ok(checkKey({ baseUrl: RELAY, config: relayCfg }, "").error);
+});
+
+test("relay hooks leave their arguments untouched", () => {
+  const ctx = relayDriver(imageDecode({ model: "qwen-image-2.0", prompt: "x", size: "1024*1024" }).requestBody);
+  buildSubmitRequest(ctx);
+  extractUsage(ctx);
+  parseSubmitResponse(ctx, deepFreeze({ statusCode: 200, headers: {}, body: { data: [{ url: "https://cdn/x.png" }] } }));
+  convertRequest(relayCtx("/v1/audio/speech"), deepFreeze({ model: "m", stream: false, body: { model: "c", input: "x" } }));
+  convertResponse(relayCtx("/v1/models", { state: deepFreeze({ kind: "models", relay: true, ids: ["a"], pages: 1 }) }), deepFreeze({ status: 200, headers: {}, body: JSON.stringify({ data: [{ id: "b" }] }) }));
 });

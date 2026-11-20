@@ -13,6 +13,7 @@ locale: zh-CN
 - 视频：OpenAI 视频接口和 DashScope 视频接口，支持万相 3.0（含 Prime）、万相 2.7、2.6、2.5 和 HappyHorse 1.1。
 - 语音合成：OpenAI 语音接口，Qwen-Audio TTS，直接返回音频文件。
 - 语音识别：OpenAI 转写接口，Qwen-Audio ASR。
+- 上游类型：百炼官方 API（默认），或任意 OpenAI 兼容中转，用于文本、向量、图片生成、语音合成和识别（见「OpenAI 兼容中转」）。
 
 需要 new-api v1.0.0-rc.50 或更高版本（支持 provider 插件和用量档案）。插件 key 为 `byaiden_bailian`。
 
@@ -29,9 +30,24 @@ locale: zh-CN
    也可以使用业务空间专属地址，如 `https://WORKSPACE_ID.cn-beijing.maas.aliyuncs.com`；此时「获取模型列表」只返回百炼列出的模型，视频模型需要手动添加。
 3. 模型：见下方表格。其他文本模型（如 `qwen3-max`、`qwen-plus`）直接把模型名加到渠道里即可，也可以对外发布自己的模型名，在渠道模型映射里映射过去（`{"my-model": "qwen-plus"}`）。文本接口会透传任意模型。图片和视频请求必须使用下表中的图片或视频模型，或映射到这些模型的名称。
 4. 默认音色（渠道设置）：语音请求使用 OpenAI 音色名（`alloy`、`nova` 等）或未指定音色时使用的 Qwen-Audio 音色，默认 `longanhuan_v3.6`。各模型可用音色见百炼音色列表。
-5. 设置价格（见「计费」）。渠道测试按钮会用测试模型发送对话请求，请选一个文本模型作测试模型。
+5. 上游类型（渠道设置）：`百炼官方 API`（默认）对应上面的 DashScope 地址；`OpenAI 兼容中转` 用于百炼前面的中转（见「OpenAI 兼容中转」）。
+6. 设置价格（见「计费」）。渠道测试按钮会用测试模型发送对话请求，请选一个文本模型作测试模型。
 
 内置的 `alibaba` 插件在内置「阿里百炼」类型渠道上也提供部分相同的图片、视频模型和原生路径。两者可以同时安装，请求选中哪个渠道就由哪个插件执行。
+
+## OpenAI 兼容中转
+
+渠道要调用兼容 OpenAI 接口的服务（另一个网关、代理）而不是百炼时，把上游类型设为 `OpenAI 兼容中转`。Base URL 填中转根地址，不带 `/v1`（如 `https://relay.example.com`）；Key 填中转的 Key，以 `Authorization: Bearer` 发送。此模式下 Base URL 留空或填百炼地址根路径时无法保存。
+
+| 客户端请求 | 发往中转 | 计费 |
+| --- | --- | --- |
+| `POST /v1/chat/completions`、`/v1/responses`、`/v1/messages`、`/v1/embeddings`，含流式 | Base URL 下的同一路径，请求体和模型名与普通渠道一致 | 按中转返回的 usage，与 OpenAI 渠道相同 |
+| `POST /v1/images/generations`，使用本插件的图片模型 | `POST /v1/images/generations`，带 `prompt`、`n`、`size`（`1024x1024` 形式）和该模型的扩展字段 | 使用「计费」中的任务表达式，按实际交付的图片结算 |
+| `POST /v1/audio/speech` | `POST /v1/audio/speech`，原样发送 | 按 `input` 字符数，与百炼相同 |
+| `POST /v1/audio/transcriptions` | `POST /v1/audio/transcriptions`，表单原样发送 | 中转返回的音频秒数（带时长 usage 的 `json`，或 `verbose_json`）作为 token，与百炼相同；其他回复原样返回 |
+| 获取模型列表 | `GET /v1/models` | 不计费；返回中转自己的列表，不做过滤 |
+
+中转模式下不提供以下功能，会在发出请求前直接报错且不计费：视频模型（`/v1/videos` 和 DashScope 视频路由）、图片编辑及带输入图片的请求、DashScope 原生接口（`/api/v1/...`）。「默认音色」只对百炼官方 API 生效，中转模式下 `voice` 原样发送。上游模型名不会被改写；中转的模型名不同时请用渠道模型映射。New API（类型 60）渠道忽略此设置。
 
 ## 模型与接口
 
@@ -122,15 +138,15 @@ OpenAI 字段：`prompt`、`seconds`、`size`（`832x480`、`1280x720`、`1920x1
 | `wan2.7-image-pro`、`qwen-image-2.0-pro` 及其日期版本 | `tier("base", u("image_count") * 0.5)` |
 | `qwen-image-3.0-pro` | `tier("base", (u("image_count") * (u("output_image_type") == "qima_output_2k" ? 0.5 : 0.25) + u("input_image_count") * 0.02))` |
 | `qwen-image-3.0` | `tier("base", (u("image_count") * 0.18 + u("input_image_count") * 0.02))` |
-| `z-image-turbo` | `tier("base", u("image_count") * (u("prompt_extend") ? 0.2 : 0.1))` |
+| `z-image-turbo` | `tier("base", u("image_count") * (u("prompt_extend") == true ? 0.2 : 0.1))` |
 | `wan3.0-video` | `tier("base", u("seconds") * (u("resolution") == "1080P" ? 1.2 : u("resolution") == "720P" ? 0.6 : 0.3))` |
 | `wan3.0-video-prime` | `tier("base", u("seconds") * (u("resolution") == "1080P" ? 1.8 : u("resolution") == "720P" ? 0.9 : 0.45))` |
 | `happyhorse-1.1-t2v`、`happyhorse-1.1-i2v`、`happyhorse-1.1-r2v` | `tier("base", u("seconds") * (u("resolution") == "1080P" ? 1.2 : u("resolution") == "720P" ? 0.9 : 0.45))` |
 | `wan2.7-t2v`、`wan2.7-i2v` 及其日期版本，`wan2.6-t2v`、`wan2.6-i2v` | `tier("base", u("seconds") * (u("resolution") == "1080P" ? 1 : 0.6))` |
-| `wan2.6-i2v-flash` | `tier("base", u("seconds") * (u("audio") ? (u("resolution") == "1080P" ? 0.5 : 0.3) : (u("resolution") == "1080P" ? 0.25 : 0.15)))` |
+| `wan2.6-i2v-flash` | `tier("base", u("seconds") * (u("audio") == true ? (u("resolution") == "1080P" ? 0.5 : 0.3) : (u("resolution") == "1080P" ? 0.25 : 0.15)))` |
 | `wan2.5-t2v-preview`、`wan2.5-i2v-preview` | `tier("base", u("seconds") * (u("resolution") == "1080P" ? 1 : u("resolution") == "720P" ? 0.6 : 0.3))` |
 
-`wan3.0-video` 按原价编写；百炼可能有限时折扣。
+`wan3.0-video` 按原价编写；百炼可能有限时折扣。以上每条表达式在模型详情页都会展开为价格表（按分辨率、输出档位或 `prompt_extend` / `audio` 取值分行）。
 
 语音合成和语音识别由 new-api 按普通请求计费，表达式表示每百万个 `p` 单位的价格（同样直接用人民币数字）：
 
